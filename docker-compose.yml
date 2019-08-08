@@ -1,0 +1,12 @@
+version: "3"
+services:
+  app:
+    build: .
+    container_name: pettycc
+    environment:
+      TZ: 'Asia/Tokyo'
+    working_dir: /home/app
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/home/app
