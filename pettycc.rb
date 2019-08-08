@@ -41,7 +41,7 @@ def main
       next
     end
 
-    STDERR.puts "予期しない文字です: '#{p[0]}'\n"
+    STDERR.puts "unexpected character: '#{p[0]}'\n"
     return 1
   end
 
