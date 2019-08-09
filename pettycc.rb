@@ -170,17 +170,27 @@ def expr
 end
 
 def mul
-  node = term()
+  node = unary()
 
   loop do
     if consume("*")
-      node = new_binary(NodeKind::MUL, node, term())
+      node = new_binary(NodeKind::MUL, node, unary())
     elsif consume("/")
-      node = new_binary(NodeKind::DIV, node, term())
+      node = new_binary(NodeKind::DIV, node, unary())
     else
       return node
     end
   end
+end
+
+def unary
+  if consume("+")
+    return unary()
+  end
+  if consume("-")
+    return new_binary(NodeKind::SUB, new_num(0), unary())
+  end
+  return term()
 end
 
 def term
