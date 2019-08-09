@@ -5,8 +5,14 @@ end
 
 def next_cur(p)
   str = p.slice!(0)
-  return if str.nil?
+  return nil if str.nil?
   $user_input_cur += 1
+  return str
+end
+
+def n_next_cur(p, num)
+  str = ""
+  num.times{ str += next_cur(p) }
   return str
 end
 
@@ -21,24 +27,35 @@ module TokenKind
 end
 
 class Token
-  attr_accessor :kind, :next, :val, :str, :cur
+  attr_accessor :kind, :next, :val, :str, :len, :cur
 
   def initialize
     @kind = nil
     @next = nil
     @val  = nil
     @str  = nil
+    @len  = nil
+
     @cur  = nil
   end
 end
 
-def new_token(kind, cur, str)
+def new_token(kind, cur, str, len)
   tok = Token.new
   tok.kind = kind
   tok.str = str
+  tok.len = len
   tok.cur = $user_input_cur
   cur.next = tok
   return tok
+end
+
+def startswith(p, q)
+  if p[0].nil? || p[1].nil?
+    return false
+  end
+  op = p[0] + p[1]
+  return op == q
 end
 
 def error(msg)
@@ -47,13 +64,15 @@ def error(msg)
 end
 
 def error_at(msg)
-  pos = $user_input_cur
-  STDERR.puts("#{ARGV[0]}\n" + "#{" "*$token.cur + "^ " + msg}\n")
+  pos = $token.cur || 0
+  STDERR.puts("#{ARGV[0]}\n" + "#{" "*pos + "^ " + msg}\n")
   exit!
 end
 
 def consume(op)
-  if $token.kind != TokenKind::RESERVED || $token.str != op
+  if $token.kind != TokenKind::RESERVED \
+  || op.length != $token.len \
+  || $token.str != op
     return false
   end
   $token = $token.next
@@ -61,8 +80,10 @@ def consume(op)
 end
 
 def expect(op)
-  if $token.kind != TokenKind::RESERVED || $token.str != op
-    error_at("expected '#{op}'")
+  if $token.kind != TokenKind::RESERVED \
+  || op.length != $token.len \
+  || $token.str != op
+    error_at("expected \"#{op}\"")
   end
   $token = $token.next
 end
@@ -91,25 +112,34 @@ def tokenize()
       next
     end
 
-    if ["+", "-", "*", "/", "(", ")"].include?(p[0])
-      cur = new_token(TokenKind::RESERVED, cur, next_cur(p))
+    if startswith(p, "==") || startswith(p, "!=") ||
+        startswith(p, "<=") || startswith(p, ">=")
+      op = n_next_cur(p, 2)
+      cur = new_token(TokenKind::RESERVED, cur, op, 2)
+      next
+    end
+
+    if ["+", "-", "*", "/", "(", ")", "<", ">"].include?(p[0])
+      cur = new_token(TokenKind::RESERVED, cur, next_cur(p), 1)
       next
     end
 
     if int?(p[0])
+      q = p.dup
       num = ""
       while int?(p[0])
         num += next_cur(p)
       end
-      cur = new_token(TokenKind::NUM, cur, num)
+      cur = new_token(TokenKind::NUM, cur, num, 0)
       cur.val = num.to_i
+      cur.len = q.length - p.length
       next
     end
 
     error_at("invalid token")
   end
 
-  new_token(TokenKind::EOF, cur, p[0])
+  new_token(TokenKind::EOF, cur, p[0], 0)
   $token = $token.next
 end
 
@@ -122,6 +152,10 @@ module NodeKind
   SUB = "SUB" # -
   MUL = "MUL" # *
   DIV = "DIV" # /
+  EQ  = "EQ"  # ==
+  NE  = "NE"  # !=
+  LT  = "LT"  # <
+  LE  = "LE"  # <=
   NUM = "NUM" # Integer
 end
 
@@ -156,6 +190,42 @@ def new_num(val)
 end
 
 def expr
+  return equality()
+end
+
+def equality
+  node = relational()
+
+  loop do
+    if consume("==")
+      node = new_binary(NodeKind::EQ, node, relational())
+    elsif consume("!=")
+      node = new_binary(NodeKind::NE, node, relational())
+    else
+      return node
+    end
+  end
+end
+
+def relational
+  node = add()
+
+  loop do
+    if consume("<")
+      node = new_binary(NodeKind::LT, node, add())
+    elsif consume("<=")
+      node = new_binary(NodeKind::LE, node, add())
+    elsif consume(">")
+      node = new_binary(NodeKind::LT, add(), node)
+    elsif consume(">=")
+      node = new_binary(NodeKind::LE, add(), node)
+    else
+      return node
+    end
+  end
+end
+
+def add
   node = mul()
 
   loop do
@@ -229,6 +299,22 @@ def gen(node)
   when NodeKind::DIV then
     puts("  cqo\n")
     puts("  idiv rdi\n")
+  when NodeKind::EQ then
+    puts("  cmp rax, rdi\n")
+    puts("  sete al\n")
+    puts("  movzb rax, al\n")
+  when NodeKind::NE then
+    puts("  cmp rax, rdi\n")
+    puts("  setne al\n")
+    puts("  movzb rax, al\n")
+  when NodeKind::LT then
+    puts("  cmp rax, rdi\n")
+    puts("  setl al\n")
+    puts("  movzb rax, al\n")
+  when NodeKind::LE then
+    puts("  cmp rax, rdi\n")
+    puts("  setle al\n")
+    puts("  movzb rax, al\n")
   end
 
   puts("  push rax\n")
