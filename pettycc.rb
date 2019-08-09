@@ -1,3 +1,15 @@
+
+def int?(str)
+  str.to_i.to_s == str.to_s
+end
+
+def next_cur(p)
+  str = p.slice!(0)
+  return if str.nil?
+  $user_input_cur += 1
+  return str
+end
+
 module TokenKind
   RESERVED = "RESERVED"
   NUM = "NUM"
@@ -16,6 +28,15 @@ class Token
   end
 end
 
+def new_token(kind, cur, str)
+  tok = Token.new
+  tok.kind = kind
+  tok.str = str
+  tok.cur = $user_input_cur
+  cur.next = tok
+  return tok
+end
+
 def error(msg)
   STDERR.puts(msg)
   exit!
@@ -25,17 +46,6 @@ def error_at(msg)
   pos = $user_input_cur
   STDERR.puts("#{ARGV[0]}\n" + "#{" "*$token.cur + "^ " + msg}\n")
   exit!
-end
-
-def int?(str)
-  str.to_i.to_s == str.to_s
-end
-
-def next_cur(p)
-  str = p.slice!(0)
-  return if str.nil?
-  $user_input_cur += 1
-  return str
 end
 
 def consume(op)
@@ -64,15 +74,6 @@ end
 
 def at_eof
   return $token.kind == TokenKind::EOF
-end
-
-def new_token(kind, cur, str)
-  tok = Token.new
-  tok.kind = kind
-  tok.str = str
-  tok.cur = $user_input_cur
-  cur.next = tok
-  return tok
 end
 
 def tokenize()
