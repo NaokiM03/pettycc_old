@@ -10,6 +10,10 @@ def next_cur(p)
   return str
 end
 
+#
+#  Tokenizer
+#
+
 module TokenKind
   RESERVED = "RESERVED"
   NUM = "NUM"
@@ -87,7 +91,7 @@ def tokenize()
       next
     end
 
-    if p[0] == "+" || p[0] == "-"
+    if ["+", "-", "*", "/", "(", ")"].include?(p[0])
       cur = new_token(TokenKind::RESERVED, cur, next_cur(p))
       next
     end
@@ -109,6 +113,117 @@ def tokenize()
   $token = $token.next
 end
 
+#
+#  Parser
+#
+
+module NodeKind
+  ADD = "ADD" # +
+  SUB = "SUB" # -
+  MUL = "MUL" # *
+  DIV = "DIV" # /
+  NUM = "NUM" # Integer
+end
+
+class Node
+  attr_accessor :kind, :lhs, :rhs, :val
+
+  def initialize
+    @kind = nil # NodeKind
+    @lhs  = nil # Left-hand side
+    @rhs  = nil # Right-hand side
+    @val  = nil # value if kind == NodeKind::NUM
+  end
+end
+
+def new_node(kind)
+  node = Node.new
+  node.kind = kind
+  return node
+end
+
+def new_binary(kind, lhs, rhs)
+  node = new_node(kind)
+  node.lhs = lhs
+  node.rhs = rhs
+  return node
+end
+
+def new_num(val)
+  node = new_node(NodeKind::NUM)
+  node.val = val
+  return node
+end
+
+def expr
+  node = mul()
+
+  loop do
+    if consume("+")
+      node = new_binary(NodeKind::ADD, node, mul())
+    elsif consume("-")
+      node = new_binary(NodeKind::SUB, node, mul())
+    else
+      return node
+    end
+  end
+end
+
+def mul
+  node = term()
+
+  loop do
+    if consume("*")
+      node = new_binary(NodeKind::MUL, node, term())
+    elsif consume("/")
+      node = new_binary(NodeKind::DIV, node, term())
+    else
+      return node
+    end
+  end
+end
+
+def term
+  if consume("(")
+    node = expr()
+    expect(")")
+    return node
+  end
+
+  return new_num(expect_number())
+end
+
+#
+#  Code generator
+#
+
+def gen(node)
+  if node.kind == NodeKind::NUM
+    puts("  push #{node.val}\n")
+    return
+  end
+
+  gen(node.lhs)
+  gen(node.rhs)
+
+  puts("  pop rdi\n")
+  puts("  pop rax\n")
+
+  case node.kind
+  when NodeKind::ADD then
+    puts("  add rax, rdi\n")
+  when NodeKind::SUB then
+    puts("  sub rax, rdi\n")
+  when NodeKind::MUL then
+    puts("  imul rax, rdi\n")
+  when NodeKind::DIV then
+    puts("  cqo\n")
+    puts("  idiv rdi\n")
+  end
+
+  puts("  push rax\n")
+end
+
 $token
 $user_input
 $user_input_cur
@@ -118,25 +233,19 @@ def main
     error "#{$0}: invalid number of arguments\n"
   end
 
+  # Tokenize and parse
   $user_input = ARGV[0]
   $user_input_cur = -1
   $token = tokenize()
+  node = expr()
 
   puts(".intel_syntax noprefix\n")
   puts(".global main\n")
   puts("main:\n")
 
-  puts("  mov rax, #{expect_number()}\n")
+  gen(node)
 
-  while !at_eof()
-    if consume("+")
-      puts("  add rax, #{expect_number()}\n")
-    end
-
-    expect("-")
-    puts("  sub rax, #{expect_number()}\n")
-  end
-
+  puts("  pop rax\n")
   puts("  ret\n")
 end
 
