@@ -125,16 +125,17 @@ end
 #
 
 module NodeKind
-  ADD    = "ADD"    # +
-  SUB    = "SUB"    # -
-  MUL    = "MUL"    # *
-  DIV    = "DIV"    # /
-  EQ     = "EQ"     # ==
-  NE     = "NE"     # !=
-  LT     = "LT"     # <
-  LE     = "LE"     # <=
-  RETURN = "RETURN" # "return"
-  NUM    = "NUM"    # Integer
+  ADD       = "ADD"       # +
+  SUB       = "SUB"       # -
+  MUL       = "MUL"       # *
+  DIV       = "DIV"       # /
+  EQ        = "EQ"        # ==
+  NE        = "NE"        # !=
+  LT        = "LT"        # <
+  LE        = "LE"        # <=
+  RETURN    = "RETURN"    # "return"
+  EXPR_STMT = "EXPR_STMT" # Expression statement
+  NUM       = "NUM"       # Integer
 end
 
 class Node
@@ -193,7 +194,7 @@ def stmt
     return node
   end
 
-  node = expr()
+  node = new_unary(NodeKind::EXPR_STMT, expr())
   expect(";")
   return node
 end

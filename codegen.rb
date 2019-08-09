@@ -8,6 +8,10 @@ def gen(node)
     puts("  pop rax\n")
     puts("  ret\n")
     return
+  when NodeKind::EXPR_STMT then
+    gen(node.lhs)
+    puts("  add rsp, 8\n")
+    return
   end
 
   gen(node.lhs)
@@ -54,7 +58,6 @@ def codegen(node)
 
   loop do
     gen(node)
-    puts("  pop rax\n")
     break if node.next.nil?
     node = node.next
   end
