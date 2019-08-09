@@ -3,7 +3,7 @@ ls:
 	ls
 
 test:
-	ruby ./pettycc.rb
+	# ruby ./pettycc.rb
 	./test.sh
 
 clean:

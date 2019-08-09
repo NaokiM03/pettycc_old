@@ -66,7 +66,7 @@ def tokenize(p)
 
   while p.length != 0
     if p[0] == " "
-      input.slice!(0)
+      p.slice!(0)
       next
     end
 
@@ -112,7 +112,7 @@ def main
       puts("  add rax, #{expect_number()}\n")
     end
 
-    expext("-")
+    expect("-")
     puts("  sub rax, #{expect_number()}\n")
   end
 
