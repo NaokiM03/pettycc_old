@@ -3,9 +3,8 @@ def gen_lval(node)
     error("not an lvalue")
   end
 
-  offset = (node.name.ord - "a".ord + 1) * 8
   puts("  mov rax, rbp\n")
-  puts("  sub rax, #{offset}\n")
+  puts("  sub rax, #{node.lvar.offset}\n")
   puts("  push rax\n")
 end
 
@@ -76,15 +75,16 @@ def gen(node)
   puts("  push rax\n")
 end
 
-def codegen(node)
+def codegen(prog)
   puts(".intel_syntax noprefix\n")
   puts(".global main\n")
   puts("main:\n")
 
   puts("  push rbp\n")
   puts("  mov rbp, rsp\n")
-  puts("  sub rsp, 208\n")
+  puts("  sub rsp, #{prog.stack_size}\n")
 
+  node = prog.node
   loop do
     gen(node)
     break if node.next.nil?

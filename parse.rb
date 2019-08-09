@@ -33,6 +33,10 @@ def new_token(kind, cur, str, len)
   return tok
 end
 
+def strndup(p, len)
+  p.dup
+end
+
 def consume?(op)
   if $token.kind != TokenKind::RESERVED \
   || op.length != $token.len \
@@ -111,8 +115,12 @@ def tokenize()
       next
     end
 
-    if downcase?(p[0])
-      cur = new_token(TokenKind::IDENT, cur, next_cur(p), 1)
+    if alpha?(p[0])
+      str = ""
+      while alnum?(p[0])
+        str += next_cur(p)
+      end
+      cur = new_token(TokenKind::IDENT, cur, str, str.length)
       next
     end
 
@@ -139,6 +147,29 @@ end
 #  Parser
 #
 
+class LVar
+  attr_accessor :next, :name, :offset
+
+  def initialize
+    @next   = nil
+    @name   = nil
+    @offset = nil
+  end
+end
+
+def find_lvar(tok)
+  var = $locals
+  loop do
+    break if var.nil?
+    if var.name.length == tok.len && tok.str == var.name
+      return var
+    end
+    break if var.next.nil?
+    var = var.next
+  end
+  return nil
+end
+
 module NodeKind
   ADD       = "ADD"       # +
   SUB       = "SUB"       # -
@@ -156,15 +187,25 @@ module NodeKind
 end
 
 class Node
-  attr_accessor :kind, :next, :lhs, :rhs, :name, :val
+  attr_accessor :kind, :next, :lhs, :rhs, :lvar, :val
 
   def initialize
-    @kind = nil # NodeKind
-    @next = nil # Next node
-    @lhs  = nil # Left-hand side
-    @rhs  = nil # Right-hand side
-    @name = nil # local variable name
-    @val  = nil # value if kind == NodeKind::NUM
+    @kind = nil      # NodeKind
+    @next = nil      # Next node
+    @lhs  = nil      # Left-hand side
+    @rhs  = nil      # Right-hand side
+    @lvar = LVar.new # local variable name
+    @val  = nil      # value if kind == NodeKind::NUM
+  end
+end
+
+class Program
+  attr_accessor :node, :locals, :stack_size
+
+  def initialize
+    @node       = nil
+    @locals      = nil
+    @stack_size = nil
   end
 end
 
@@ -193,13 +234,15 @@ def new_num(val)
   return node
 end
 
-def new_lvar(name)
+def new_lvar(var)
   node = new_node(NodeKind::LVAR)
-  node.name = name
+  node.lvar = var
   return node
 end
 
 def program
+  $locals = nil
+
   cur = Token.new
   node = cur
 
@@ -208,7 +251,10 @@ def program
     cur = cur.next
   end
 
-  node = node.next
+  prog = Program.new
+  prog.node = node.next
+  prog.locals = $locals
+  return prog
 end
 
 def stmt
@@ -314,7 +360,14 @@ def term
 
   tok = consume_ident()
   if tok
-    return new_lvar(tok.str)
+    var = find_lvar(tok)
+    if !var
+      var = LVar.new
+      var.next = $locals
+      var.name = strndup(tok.str, tok.len)
+      $locals = var
+    end
+    return new_lvar(var)
   end
 
   return new_num(expect_number())

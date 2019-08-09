@@ -47,6 +47,7 @@ end
 
 
 $token
+$locals
 $user_input
 $user_input_cur
 
@@ -59,9 +60,20 @@ def main
   $user_input = ARGV[0]
   $user_input_cur = -1
   $token = tokenize()
-  node = program()
+  prog = program()
 
-  codegen(node)
+  offset = 0
+  var = prog.locals
+  loop do
+    break if var.nil?
+    offset += 8
+    var.offset = offset
+    break if var.next.nil?
+    var = var.next
+  end
+  prog.stack_size = offset
+
+  codegen(prog)
 end
 
 if __FILE__ == $0
