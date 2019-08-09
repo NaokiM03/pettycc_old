@@ -82,7 +82,7 @@ def tokenize()
       next
     end
 
-    if ["+", "-", "*", "/", "(", ")", "<", ">"].include?(p[0])
+    if ["+", "-", "*", "/", "(", ")", "<", ">", ";"].include?(p[0])
       cur = new_token(TokenKind::RESERVED, cur, next_cur(p), 1)
       next
     end
@@ -123,10 +123,11 @@ module NodeKind
 end
 
 class Node
-  attr_accessor :kind, :lhs, :rhs, :val
+  attr_accessor :kind, :next, :lhs, :rhs, :val
 
   def initialize
     @kind = nil # NodeKind
+    @next = nil # Next node
     @lhs  = nil # Left-hand side
     @rhs  = nil # Right-hand side
     @val  = nil # value if kind == NodeKind::NUM
@@ -149,6 +150,23 @@ end
 def new_num(val)
   node = new_node(NodeKind::NUM)
   node.val = val
+  return node
+end
+
+def program
+  cur = Token.new
+
+  while !at_eof()
+    cur.next = stmt()
+    cur = cur.next
+  end
+
+  return cur
+end
+
+def stmt
+  node = expr()
+  expect(";")
   return node
 end
 

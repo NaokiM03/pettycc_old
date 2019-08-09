@@ -46,8 +46,12 @@ def codegen(node)
   puts(".global main\n")
   puts("main:\n")
 
-  gen(node)
+  loop do
+    gen(node)
+    puts("  pop rax\n")
+    break if node.next.nil?
+    node = node.next
+  end
 
-  puts("  pop rax\n")
   puts("  ret\n")
 end

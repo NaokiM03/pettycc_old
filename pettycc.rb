@@ -51,7 +51,7 @@ def main
   $user_input = ARGV[0]
   $user_input_cur = -1
   $token = tokenize()
-  node = expr()
+  node = program()
 
   codegen(node)
 end
