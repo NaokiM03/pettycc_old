@@ -1,6 +1,12 @@
 def gen(node)
-  if node.kind == NodeKind::NUM
+  case node.kind
+  when NodeKind::NUM then
     puts("  push #{node.val}\n")
+    return
+  when NodeKind::RETURN then
+    gen(node.lhs)
+    puts("  pop rax\n")
+    puts("  ret\n")
     return
   end
 

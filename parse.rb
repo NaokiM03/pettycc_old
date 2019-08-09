@@ -32,7 +32,7 @@ def new_token(kind, cur, str, len)
   return tok
 end
 
-def consume(op)
+def consume?(op)
   if $token.kind != TokenKind::RESERVED \
   || op.length != $token.len \
   || $token.str != op
@@ -64,6 +64,14 @@ def at_eof
   return $token.kind == TokenKind::EOF
 end
 
+def alpha?(c)
+  (c =~ /\A[A-Za-z]+\z/) == 0 || c == "_"
+end
+
+def alnum?(c)
+  (c =~ /\A[A-Za-z0-9]+\z/) == 0
+end
+
 def tokenize()
   p = $user_input.dup
   cur = Token.new
@@ -72,6 +80,12 @@ def tokenize()
   while p.length != 0
     if p[0] == " "
       next_cur(p)
+      next
+    end
+
+    if startswith(p, "return") && !alnum?(p[6])
+      ret = n_next_cur(p, 6)
+      cur = new_token(TokenKind::RESERVED, cur, ret, 6)
       next
     end
 
@@ -111,15 +125,16 @@ end
 #
 
 module NodeKind
-  ADD = "ADD" # +
-  SUB = "SUB" # -
-  MUL = "MUL" # *
-  DIV = "DIV" # /
-  EQ  = "EQ"  # ==
-  NE  = "NE"  # !=
-  LT  = "LT"  # <
-  LE  = "LE"  # <=
-  NUM = "NUM" # Integer
+  ADD    = "ADD"    # +
+  SUB    = "SUB"    # -
+  MUL    = "MUL"    # *
+  DIV    = "DIV"    # /
+  EQ     = "EQ"     # ==
+  NE     = "NE"     # !=
+  LT     = "LT"     # <
+  LE     = "LE"     # <=
+  RETURN = "RETURN" # "return"
+  NUM    = "NUM"    # Integer
 end
 
 class Node
@@ -147,6 +162,12 @@ def new_binary(kind, lhs, rhs)
   return node
 end
 
+def new_unary(kind, expr)
+  node = new_node(kind)
+  node.lhs = expr
+  return node
+end
+
 def new_num(val)
   node = new_node(NodeKind::NUM)
   node.val = val
@@ -155,16 +176,23 @@ end
 
 def program
   cur = Token.new
+  node = cur
 
   while !at_eof()
     cur.next = stmt()
     cur = cur.next
   end
 
-  return cur
+  node = node.next
 end
 
 def stmt
+  if consume?("return")
+    node = new_unary(NodeKind::RETURN, expr())
+    expect(";")
+    return node
+  end
+
   node = expr()
   expect(";")
   return node
@@ -178,9 +206,9 @@ def equality
   node = relational()
 
   loop do
-    if consume("==")
+    if consume?("==")
       node = new_binary(NodeKind::EQ, node, relational())
-    elsif consume("!=")
+    elsif consume?("!=")
       node = new_binary(NodeKind::NE, node, relational())
     else
       return node
@@ -192,13 +220,13 @@ def relational
   node = add()
 
   loop do
-    if consume("<")
+    if consume?("<")
       node = new_binary(NodeKind::LT, node, add())
-    elsif consume("<=")
+    elsif consume?("<=")
       node = new_binary(NodeKind::LE, node, add())
-    elsif consume(">")
+    elsif consume?(">")
       node = new_binary(NodeKind::LT, add(), node)
-    elsif consume(">=")
+    elsif consume?(">=")
       node = new_binary(NodeKind::LE, add(), node)
     else
       return node
@@ -210,9 +238,9 @@ def add
   node = mul()
 
   loop do
-    if consume("+")
+    if consume?("+")
       node = new_binary(NodeKind::ADD, node, mul())
-    elsif consume("-")
+    elsif consume?("-")
       node = new_binary(NodeKind::SUB, node, mul())
     else
       return node
@@ -224,9 +252,9 @@ def mul
   node = unary()
 
   loop do
-    if consume("*")
+    if consume?("*")
       node = new_binary(NodeKind::MUL, node, unary())
-    elsif consume("/")
+    elsif consume?("/")
       node = new_binary(NodeKind::DIV, node, unary())
     else
       return node
@@ -235,17 +263,17 @@ def mul
 end
 
 def unary
-  if consume("+")
+  if consume?("+")
     return unary()
   end
-  if consume("-")
+  if consume?("-")
     return new_binary(NodeKind::SUB, new_num(0), unary())
   end
   return term()
 end
 
 def term
-  if consume("(")
+  if consume?("(")
     node = expr()
     expect(")")
     return node

@@ -19,10 +19,14 @@ def n_next_cur(p, num)
 end
 
 def startswith(p, q)
-  if p[0].nil? || p[1].nil?
-    return false
-  end
-  op = p[0] + p[1]
+  len = q.length
+  len.times{|i|
+    return if p[i].nil?
+  }
+  op = ""
+  len.times{|i|
+    op += p[i]
+  }
   return op == q
 end
 
