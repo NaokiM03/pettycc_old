@@ -1,16 +1,41 @@
+def gen_lval(node)
+  if node.kind != NodeKind::LVAR
+    error("not an lvalue")
+  end
+
+  offset = (node.name.ord - "a".ord + 1) * 8
+  puts("  mov rax, rbp\n")
+  puts("  sub rax, #{offset}\n")
+  puts("  push rax\n")
+end
+
 def gen(node)
   case node.kind
   when NodeKind::NUM then
     puts("  push #{node.val}\n")
     return
-  when NodeKind::RETURN then
-    gen(node.lhs)
-    puts("  pop rax\n")
-    puts("  ret\n")
-    return
   when NodeKind::EXPR_STMT then
     gen(node.lhs)
     puts("  add rsp, 8\n")
+    return
+  when NodeKind::LVAR then
+    gen_lval(node)
+    puts("  pop rax\n")
+    puts("  mov rax, [rax]\n")
+    puts("  push rax\n")
+    return
+  when NodeKind::ASSIGN then
+    gen_lval(node.lhs)
+    gen(node.rhs)
+    puts("  pop rdi\n")
+    puts("  pop rax\n")
+    puts("  mov [rax], rdi\n")
+    puts("  push rdi\n")
+    return
+  when NodeKind::RETURN then
+    gen(node.lhs)
+    puts("  pop rax\n")
+    puts("  jmp .Lreturn\n")
     return
   end
 
@@ -56,11 +81,18 @@ def codegen(node)
   puts(".global main\n")
   puts("main:\n")
 
+  puts("  push rbp\n")
+  puts("  mov rbp, rsp\n")
+  puts("  sub rsp, 208\n")
+
   loop do
     gen(node)
     break if node.next.nil?
     node = node.next
   end
 
+  puts(".Lreturn:\n")
+  puts("  mov rsp, rbp\n")
+  puts("  pop rbp\n")
   puts("  ret\n")
 end

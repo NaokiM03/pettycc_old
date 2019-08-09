@@ -5,6 +5,10 @@ def int?(str)
   str.to_i.to_s == str.to_s
 end
 
+def downcase?(s)
+  (s =~ /^[a-z]+$/) == 0
+end
+
 def next_cur(p)
   str = p.slice!(0)
   return nil if str.nil?

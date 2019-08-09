@@ -4,6 +4,7 @@
 
 module TokenKind
   RESERVED = "RESERVED"
+  IDENT = "IDENT"
   NUM = "NUM"
   EOF = "EOF"
 end
@@ -40,6 +41,15 @@ def consume?(op)
   end
   $token = $token.next
   return true
+end
+
+def consume_ident
+  if $token.kind != TokenKind::IDENT
+    return nil
+  end
+  t = $token
+  $token = $token.next
+  return t
 end
 
 def expect(op)
@@ -96,8 +106,13 @@ def tokenize()
       next
     end
 
-    if ["+", "-", "*", "/", "(", ")", "<", ">", ";"].include?(p[0])
+    if ["+", "-", "*", "/", "(", ")", "<", ">", ";", "="].include?(p[0])
       cur = new_token(TokenKind::RESERVED, cur, next_cur(p), 1)
+      next
+    end
+
+    if downcase?(p[0])
+      cur = new_token(TokenKind::IDENT, cur, next_cur(p), 1)
       next
     end
 
@@ -133,19 +148,22 @@ module NodeKind
   NE        = "NE"        # !=
   LT        = "LT"        # <
   LE        = "LE"        # <=
+  ASSIGN    = "ASSIGN"    # =
   RETURN    = "RETURN"    # "return"
   EXPR_STMT = "EXPR_STMT" # Expression statement
+  LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
 end
 
 class Node
-  attr_accessor :kind, :next, :lhs, :rhs, :val
+  attr_accessor :kind, :next, :lhs, :rhs, :name, :val
 
   def initialize
     @kind = nil # NodeKind
     @next = nil # Next node
     @lhs  = nil # Left-hand side
     @rhs  = nil # Right-hand side
+    @name = nil # local variable name
     @val  = nil # value if kind == NodeKind::NUM
   end
 end
@@ -175,6 +193,12 @@ def new_num(val)
   return node
 end
 
+def new_lvar(name)
+  node = new_node(NodeKind::LVAR)
+  node.name = name
+  return node
+end
+
 def program
   cur = Token.new
   node = cur
@@ -200,7 +224,15 @@ def stmt
 end
 
 def expr
-  return equality()
+  return assign()
+end
+
+def assign
+  node = equality()
+  if consume?("=")
+    node = new_binary(NodeKind::ASSIGN, node, assign())
+  end
+  return node
 end
 
 def equality
@@ -278,6 +310,11 @@ def term
     node = expr()
     expect(")")
     return node
+  end
+
+  tok = consume_ident()
+  if tok
+    return new_lvar(tok.str)
   end
 
   return new_num(expect_number())
