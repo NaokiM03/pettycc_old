@@ -73,12 +73,24 @@ class Node
   end
 end
 
+class FuncParam
+  attr_accessor :next, :var
+
+  def initialize
+    @next       = nil
+    @var        = LVar.new
+  end
+end
+
 class Function
-  attr_accessor :next, :name, :node, :locals, :stack_size
+  attr_accessor :next, :name, :params,
+                :node, :locals, :stack_size
 
   def initialize
     @next       = nil
     @name       = nil
+    @params     = nil
+
     @node       = nil
     @locals     = nil
     @stack_size = nil
@@ -128,12 +140,44 @@ def program
   return head.next
 end
 
+def push_lvar(name)
+  var = LVar.new
+  var.next = $locals
+  var.name = name
+  $locals = var
+  return var
+end
+
+def read_func_param
+  param = FuncParam.new
+  param.var = push_lvar(expect_ident())
+  return param
+end
+
+def read_func_params
+  if consume?(")")
+    return nil
+  end
+
+  head = read_func_param()
+  cur = head
+
+  while !consume?(")")
+    expect(",")
+    cur.next = read_func_param()
+    cur = cur.next
+  end
+
+  return head
+end
+
 def function
   $locals = nil
 
-  name = expect_ident()
+  fn = Function.new
+  fn.name = expect_ident()
   expect("(")
-  expect(")")
+  fn.params = read_func_params()
   expect("{")
 
   head = Node.new
@@ -144,8 +188,6 @@ def function
     cur = cur.next
   end
 
-  fn = Function.new
-  fn.name = name
   fn.node = head.next
   fn.locals = $locals
   return fn
@@ -338,10 +380,7 @@ def term
 
     var = find_lvar(tok)
     if !var
-      var = LVar.new
-      var.next = $locals
-      var.name = strndup(tok.str, tok.len)
-      $locals = var
+      var = push_lvar(strndup(tok.str, tok.len))
     end
     return new_lvar(var)
   end

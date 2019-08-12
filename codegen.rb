@@ -174,6 +174,15 @@ def codegen(prog)
     puts("  mov rbp, rsp\n")
     puts("  sub rsp, #{fn.stack_size}\n")
 
+    i = 0
+    p = fn.params
+    while p
+      var = p.var
+      puts("  mov [rbp-#{var.offset}], #{$argreg[i]}\n")
+      i += 1
+      p = p.next
+    end
+
     node = fn.node
     while node
       gen(node)
