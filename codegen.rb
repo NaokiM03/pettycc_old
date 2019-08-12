@@ -1,11 +1,24 @@
-def gen_lval(node)
-  if node.kind != NodeKind::LVAR
-    error("not an lvalue")
+def gen_addr(node)
+  if node.kind == NodeKind::LVAR
+    puts("  lea rax, [rbp-#{node.lvar.offset}]\n")
+    printf("  push rax\n")
+    return
   end
 
-  puts("  mov rax, rbp\n")
-  puts("  sub rax, #{node.lvar.offset}\n")
+  error("not an lvalue")
+end
+
+def load
+  puts("  pop rax\n")
+  puts("  mov rax, [rax]\n")
   puts("  push rax\n")
+end
+
+def store
+  puts("  pop rdi\n")
+  puts("  pop rax\n")
+  puts("  mov [rax], rdi\n")
+  puts("  push rdi\n")
 end
 
 def gen(node)
@@ -18,18 +31,13 @@ def gen(node)
     puts("  add rsp, 8\n")
     return
   when NodeKind::LVAR then
-    gen_lval(node)
-    puts("  pop rax\n")
-    puts("  mov rax, [rax]\n")
-    puts("  push rax\n")
+    gen_addr(node)
+    load()
     return
   when NodeKind::ASSIGN then
-    gen_lval(node.lhs)
+    gen_addr(node.lhs)
     gen(node.rhs)
-    puts("  pop rdi\n")
-    puts("  pop rax\n")
-    puts("  mov [rax], rdi\n")
-    puts("  push rdi\n")
+    store()
     return
   when NodeKind::IF then
     seq = $labelseq
