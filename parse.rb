@@ -108,8 +108,8 @@ end
 def program
   $locals = nil
 
-  cur = Node.new
-  node = cur
+  head = Node.new
+  cur = head
 
   while !at_eof()
     cur.next = stmt()
@@ -117,7 +117,7 @@ def program
   end
 
   prog = Program.new
-  prog.node = node.next
+  prog.node = head.next
   prog.locals = $locals
   return prog
 end
