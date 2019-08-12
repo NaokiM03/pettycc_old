@@ -116,7 +116,7 @@ def gen(node)
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
-    puts("  jmp .Lreturn\n")
+    puts("  jmp .Lreturn#{$funcname}\n")
     return
   end
 
@@ -158,26 +158,33 @@ def gen(node)
 end
 
 def codegen(prog)
-  $labelseq = 0;
   $argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+  $labelseq = 0;
+  $funcname
 
   puts(".intel_syntax noprefix\n")
-  puts(".global main\n")
-  puts("main:\n")
 
-  puts("  push rbp\n")
-  puts("  mov rbp, rsp\n")
-  puts("  sub rsp, #{prog.stack_size}\n")
+  fn = prog
+  while fn
+    puts(".global #{fn.name}\n")
+    puts("#{fn.name}:\n")
+    $funcname = fn.name
 
-  node = prog.node
-  loop do
-    gen(node)
-    break if node.next.nil?
-    node = node.next
+    puts("  push rbp\n")
+    puts("  mov rbp, rsp\n")
+    puts("  sub rsp, #{fn.stack_size}\n")
+
+    node = fn.node
+    while node
+      gen(node)
+      node = node.next
+    end
+
+    puts(".Lreturn#{$funcname}:\n")
+    puts("  mov rsp, rbp\n")
+    puts("  pop rbp\n")
+    puts("  ret\n")
+
+    fn = fn.next
   end
-
-  puts(".Lreturn:\n")
-  puts("  mov rsp, rbp\n")
-  puts("  pop rbp\n")
-  puts("  ret\n")
 end

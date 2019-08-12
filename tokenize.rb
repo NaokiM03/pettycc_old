@@ -60,6 +60,15 @@ def expect_number
   return val
 end
 
+def expect_ident
+  if $token.kind != TokenKind::IDENT
+    error_at("expected an identifier")
+  end
+  s = strndup($token.str, $token.len)
+  $token = $token.next
+  return s
+end
+
 def at_eof
   return $token.kind == TokenKind::EOF
 end

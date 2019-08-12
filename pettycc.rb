@@ -71,16 +71,20 @@ def main
   $token = tokenize()
   prog = program()
 
-  offset = 0
-  var = prog.locals
-  loop do
-    break if var.nil?
-    offset += 8
-    var.offset = offset
-    break if var.next.nil?
-    var = var.next
+  fn = prog
+  while fn
+    offset = 0
+
+    var = fn.locals
+    while var
+      offset += 8
+      var.offset = offset
+      var = var.next
+    end
+    fn.stack_size = offset
+
+    fn = fn.next
   end
-  prog.stack_size = offset
 
   codegen(prog)
 end

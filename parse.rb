@@ -73,12 +73,14 @@ class Node
   end
 end
 
-class Program
-  attr_accessor :node, :locals, :stack_size
+class Function
+  attr_accessor :next, :name, :node, :locals, :stack_size
 
   def initialize
+    @next       = nil
+    @name       = nil
     @node       = nil
-    @locals      = nil
+    @locals     = nil
     @stack_size = nil
   end
 end
@@ -115,20 +117,38 @@ def new_lvar(var)
 end
 
 def program
+  head = Function.new
+  cur = head
+
+  while !at_eof()
+    cur.next = function()
+    cur = cur.next
+  end
+
+  return head.next
+end
+
+def function
   $locals = nil
+
+  name = expect_ident()
+  expect("(")
+  expect(")")
+  expect("{")
 
   head = Node.new
   cur = head
 
-  while !at_eof()
+  while !consume?("}")
     cur.next = stmt()
     cur = cur.next
   end
 
-  prog = Program.new
-  prog.node = head.next
-  prog.locals = $locals
-  return prog
+  fn = Function.new
+  fn.name = name
+  fn.node = head.next
+  fn.locals = $locals
+  return fn
 end
 
 def read_expr_stmt
