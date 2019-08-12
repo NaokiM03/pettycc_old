@@ -108,8 +108,21 @@ def gen(node)
       i -= 1
     end
 
-    puts("  call #{node.funcname}\n");
-    puts("  push rax\n");
+    seq = $labelseq
+    $labelseq += 1
+    puts("  mov rax, rsp\n")
+    puts("  and rax, 15\n")
+    puts("  jnz .Lcall#{seq}\n")
+    puts("  mov rax, 0\n")
+    puts("  call #{node.funcname}\n")
+    puts("  jmp .Lend#{seq}\n")
+    puts(".Lcall#{seq}:\n")
+    puts("  sub rsp, 8\n")
+    puts("  mov rax, 0\n")
+    puts("  call #{node.funcname}\n")
+    printf("  add rsp, 8\n")
+    printf(".Lend#{seq}:\n")
+    puts("  push rax\n")
     return
   when NodeKind::RETURN then
     gen(node.lhs)
