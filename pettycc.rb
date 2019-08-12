@@ -9,6 +9,14 @@ def downcase?(s)
   (s =~ /^[a-z]+$/) == 0
 end
 
+def alpha?(c)
+  (c =~ /\A[A-Za-z]+\z/) == 0 || c == "_"
+end
+
+def alnum?(c)
+  (c =~ /\A[A-Za-z0-9]+\z/) == 0
+end
+
 def next_cur(p)
   str = p.slice!(0)
   return nil if str.nil?
