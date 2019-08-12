@@ -86,6 +86,18 @@ def alnum?(c)
   (c =~ /\A[A-Za-z0-9]+\z/) == 0
 end
 
+def starts_with_keyword(p)
+  kw = ["return", "if", "else"]
+
+  kw.length.times{|i|
+    len = kw[i].length
+    if startswith(p, kw[i]) && !alnum?(p[len])
+      return kw[i]
+    end
+  }
+  return nil
+end
+
 def tokenize()
   p = $user_input.dup
   cur = Token.new
@@ -97,9 +109,11 @@ def tokenize()
       next
     end
 
-    if startswith(p, "return") && !alnum?(p[6])
-      ret = n_next_cur(p, 6)
-      cur = new_token(TokenKind::RESERVED, cur, ret, 6)
+    kw = starts_with_keyword(p)
+    if kw
+      len = kw.length
+      str = n_next_cur(p, len)
+      cur = new_token(TokenKind::RESERVED, cur, str, len)
       next
     end
 
@@ -181,19 +195,29 @@ module NodeKind
   LE        = "LE"        # <=
   ASSIGN    = "ASSIGN"    # =
   RETURN    = "RETURN"    # "return"
+  IF        = "IF"        # "if"
   EXPR_STMT = "EXPR_STMT" # Expression statement
   LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
 end
 
 class Node
-  attr_accessor :kind, :next, :lhs, :rhs, :lvar, :val
+  attr_accessor :kind, :next,
+                :lhs, :rhs,
+                :cond, :then, :els,
+                :lvar, :val
 
   def initialize
     @kind = nil      # NodeKind
     @next = nil      # Next node
+
     @lhs  = nil      # Left-hand side
     @rhs  = nil      # Right-hand side
+
+    @cond = nil      #-----
+    @then = nil      # "if"
+    @els  = nil      #-----
+
     @lvar = LVar.new # local variable name
     @val  = nil      # value if kind == NodeKind::NUM
   end
@@ -257,6 +281,10 @@ def program
   return prog
 end
 
+def read_expr_stmt
+  return new_unary(NodeKind::EXPR_STMT, expr())
+end
+
 def stmt
   if consume?("return")
     node = new_unary(NodeKind::RETURN, expr())
@@ -264,7 +292,19 @@ def stmt
     return node
   end
 
-  node = new_unary(NodeKind::EXPR_STMT, expr())
+  if consume?("if")
+    node = new_node(NodeKind::IF)
+    expect("(")
+    node.cond = expr()
+    expect(")")
+    node.then = stmt()
+    if consume?("else")
+      node.els = stmt()
+    end
+    return node
+  end
+
+  node = read_expr_stmt()
   expect(";")
   return node
 end

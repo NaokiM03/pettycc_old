@@ -31,6 +31,28 @@ def gen(node)
     puts("  mov [rax], rdi\n")
     puts("  push rdi\n")
     return
+  when NodeKind::IF then
+    seq = $labelseq
+    $labelseq += 1
+    if node.els
+      gen(node.cond)
+      puts("  pop rax\n")
+      puts("  cmp rax, 0\n")
+      puts("  je  .Lelse#{seq}\n")
+      gen(node.then)
+      puts("  jmp .Lend#{seq}\n")
+      puts(".Lelse#{seq}:\n")
+      gen(node.els)
+      puts(".Lend#{seq}:\n")
+    else
+      gen(node.cond)
+      puts("  pop rax\n")
+      puts("  cmp rax, 0\n")
+      puts("  je  .Lend#{seq}\n")
+      gen(node.then)
+      puts(".Lend#{seq}:\n")
+    end
+    return
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
@@ -75,7 +97,11 @@ def gen(node)
   puts("  push rax\n")
 end
 
+$labelseq
+
 def codegen(prog)
+  $labelseq = 0;
+
   puts(".intel_syntax noprefix\n")
   puts(".global main\n")
   puts("main:\n")
