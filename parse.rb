@@ -33,6 +33,7 @@ module NodeKind
   ASSIGN    = "ASSIGN"    # =
   RETURN    = "RETURN"    # "return"
   IF        = "IF"        # "if"
+  WHILE     = "WHILE"     # "while"
   EXPR_STMT = "EXPR_STMT" # Expression statement
   LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
@@ -52,7 +53,7 @@ class Node
     @rhs  = nil      # Right-hand side
 
     @cond = nil      #-----
-    @then = nil      # "if"
+    @then = nil      # "if" or "while" statement
     @els  = nil      #-----
 
     @lvar = LVar.new # local variable name
@@ -138,6 +139,15 @@ def stmt
     if consume?("else")
       node.els = stmt()
     end
+    return node
+  end
+
+  if consume?("while")
+    node = new_node(NodeKind::WHILE)
+    expect("(")
+    node.cond = expr()
+    expect(")")
+    node.then = stmt()
     return node
   end
 
