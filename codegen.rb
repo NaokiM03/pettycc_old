@@ -158,8 +158,14 @@ def gen(node)
 
   case node.kind
   when NodeKind::ADD then
+    if node.ty.kind == TypeKind::PTR
+      puts("  imul rdi, 8\n")
+    end
     puts("  add rax, rdi\n")
   when NodeKind::SUB then
+    if node.ty.kind == TypeKind::PTR
+      puts("  imul rdi, 8\n")
+    end
     puts("  sub rax, rdi\n")
   when NodeKind::MUL then
     puts("  imul rax, rdi\n")

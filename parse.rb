@@ -45,7 +45,7 @@ module NodeKind
 end
 
 class Node
-  attr_accessor :kind, :next,
+  attr_accessor :kind, :next, :ty,
                 :lhs, :rhs,
                 :cond, :then, :els, :init, :inc,
                 :body,
@@ -55,6 +55,7 @@ class Node
   def initialize
     @kind     = nil      # NodeKind
     @next     = nil      # Next node
+    @ty       = Type.new # Type
 
     @lhs      = nil      # Left-hand side
     @rhs      = nil      # Right-hand side
@@ -96,6 +97,20 @@ class Function
     @node       = nil
     @locals     = nil
     @stack_size = nil
+  end
+end
+
+module TypeKind
+  INT = "INT"
+  PTR = "PTR"
+end
+
+class Type
+  attr_accessor :kind, :base
+
+  def initialize
+    @kind = nil
+    @base = nil
   end
 end
 

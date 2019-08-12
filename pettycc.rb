@@ -1,6 +1,7 @@
 require "./codegen.rb"
 require "./parse.rb"
 require "./tokenize.rb"
+require "./typing.rb"
 
 def int?(str)
   str.to_i.to_s == str.to_s
@@ -70,6 +71,7 @@ def main
   $user_input_cur = -1
   $token = tokenize()
   prog = program()
+  add_type(prog)
 
   fn = prog
   while fn
