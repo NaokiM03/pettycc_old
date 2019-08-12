@@ -36,6 +36,7 @@ module NodeKind
   WHILE     = "WHILE"     # "while"
   FOR       = "FOR"       # "for"
   BLOCK     = "BLOCK"     # { ... }
+  FUNCALL   = "FUNCALL"   # Function call
   EXPR_STMT = "EXPR_STMT" # Expression statement
   LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
@@ -46,25 +47,28 @@ class Node
                 :lhs, :rhs,
                 :cond, :then, :els, :init, :inc,
                 :body,
+                :funcname,
                 :lvar, :val
 
   def initialize
-    @kind = nil      # NodeKind
-    @next = nil      # Next node
+    @kind     = nil      # NodeKind
+    @next     = nil      # Next node
 
-    @lhs  = nil      # Left-hand side
-    @rhs  = nil      # Right-hand side
+    @lhs      = nil      # Left-hand side
+    @rhs      = nil      # Right-hand side
 
-    @cond = nil      #-------------------------------
-    @then = nil      #
-    @els  = nil      # "if", "while" or "for" statement
-    @init = nil      #
-    @inc  = nil      #-------------------------------
+    @cond     = nil      #-------------------------------
+    @then     = nil      #
+    @els      = nil      # "if", "while" or "for" statement
+    @init     = nil      #
+    @inc      = nil      #-------------------------------
 
-    @body = nil      # Block
+    @body     = nil      # Block
 
-    @lvar = LVar.new # local variable name
-    @val  = nil      # value if kind == NodeKind::NUM
+    @funcname = nil      # Function call
+
+    @lvar     = LVar.new # local variable name
+    @val      = nil      # value if kind == NodeKind::NUM
   end
 end
 
@@ -287,6 +291,13 @@ def term
 
   tok = consume_ident()
   if tok
+    if consume?("(")
+      expect(")")
+      node = new_node(NodeKind::FUNCALL)
+      node.funcname = strndup(tok.str, tok.len)
+      return node
+    end
+
     var = find_lvar(tok)
     if !var
       var = LVar.new

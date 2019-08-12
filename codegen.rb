@@ -94,6 +94,10 @@ def gen(node)
       n = n.next
     end
     return
+  when NodeKind::FUNCALL then
+    puts("  call #{node.funcname}\n");
+    puts("  push rax\n");
+    return
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
