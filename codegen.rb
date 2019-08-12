@@ -87,10 +87,8 @@ def gen(node)
     return
   when NodeKind::BLOCK then
     n = node.body
-    loop do
-      break if n.nil?
+    while n
       gen(n)
-      break if n.next.nil?
       n = n.next
     end
     return
