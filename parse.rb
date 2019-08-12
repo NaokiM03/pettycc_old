@@ -34,6 +34,7 @@ module NodeKind
   RETURN    = "RETURN"    # "return"
   IF        = "IF"        # "if"
   WHILE     = "WHILE"     # "while"
+  FOR       = "FOR"       # "for"
   EXPR_STMT = "EXPR_STMT" # Expression statement
   LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
@@ -42,7 +43,7 @@ end
 class Node
   attr_accessor :kind, :next,
                 :lhs, :rhs,
-                :cond, :then, :els,
+                :cond, :then, :els, :init, :inc,
                 :lvar, :val
 
   def initialize
@@ -52,9 +53,11 @@ class Node
     @lhs  = nil      # Left-hand side
     @rhs  = nil      # Right-hand side
 
-    @cond = nil      #-----
-    @then = nil      # "if" or "while" statement
-    @els  = nil      #-----
+    @cond = nil      #-------------------------------
+    @then = nil      #
+    @els  = nil      # "if", "while" or "for" statement
+    @init = nil      #
+    @inc  = nil      #-------------------------------
 
     @lvar = LVar.new # local variable name
     @val  = nil      # value if kind == NodeKind::NUM
@@ -147,6 +150,25 @@ def stmt
     expect("(")
     node.cond = expr()
     expect(")")
+    node.then = stmt()
+    return node
+  end
+
+  if consume?("for")
+    node = new_node(NodeKind::FOR)
+    expect("(")
+    if !consume?(";")
+      node.init = read_expr_stmt()
+      expect(";")
+    end
+    if !consume?(";")
+      node.cond = expr()
+      expect(";")
+    end
+    if !consume?(")")
+      node.inc = read_expr_stmt()
+      expect(")")
+    end
     node.then = stmt()
     return node
   end

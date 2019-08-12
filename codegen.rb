@@ -65,6 +65,26 @@ def gen(node)
     puts("  jmp .Lbegin#{seq}\n")
     puts(".Lend#{seq}:\n")
     return
+  when NodeKind::FOR then
+    seq = $labelseq
+    $labelseq += 1
+    if node.init
+      gen(node.init)
+    end
+    puts(".Lbegin#{seq}:\n")
+    if node.cond
+      gen(node.cond)
+      puts("  pop rax\n")
+      puts("  cmp rax, 0\n")
+      puts("  je  .Lend#{seq}\n")
+    end
+    gen(node.then)
+    if node.inc
+      gen(node.inc)
+    end
+    puts("  jmp .Lbegin#{seq}\n")
+    puts(".Lend#{seq}:\n")
+    return
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
