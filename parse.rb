@@ -108,7 +108,7 @@ end
 def program
   $locals = nil
 
-  cur = Token.new
+  cur = Node.new
   node = cur
 
   while !at_eof()
