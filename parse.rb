@@ -31,6 +31,8 @@ module NodeKind
   LT        = "LT"        # <
   LE        = "LE"        # <=
   ASSIGN    = "ASSIGN"    # =
+  ADDR      = "ADDR"      # unary &
+  DEREF     = "DEREF"     # unary *
   RETURN    = "RETURN"    # "return"
   IF        = "IF"        # "if"
   WHILE     = "WHILE"     # "while"
@@ -341,6 +343,12 @@ def unary
   end
   if consume?("-")
     return new_binary(NodeKind::SUB, new_num(0), unary())
+  end
+  if consume?("&")
+    return new_unary(NodeKind::ADDR, unary())
+  end
+  if consume?("*")
+    return new_unary(NodeKind::DEREF, unary())
   end
   return term()
 end

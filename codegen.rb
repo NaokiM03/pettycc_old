@@ -1,7 +1,11 @@
 def gen_addr(node)
-  if node.kind == NodeKind::LVAR
+  case node.kind
+  when NodeKind::LVAR then
     puts("  lea rax, [rbp-#{node.lvar.offset}]\n")
-    printf("  push rax\n")
+    puts("  push rax\n")
+    return
+  when NodeKind::DEREF then
+    gen(node.lhs)
     return
   end
 
@@ -38,6 +42,13 @@ def gen(node)
     gen_addr(node.lhs)
     gen(node.rhs)
     store()
+    return
+  when NodeKind::ADDR then
+    gen_addr(node.lhs)
+    return
+  when NodeKind::DEREF then
+    gen(node.lhs)
+    load()
     return
   when NodeKind::IF then
     seq = $labelseq
