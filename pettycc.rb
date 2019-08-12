@@ -1,5 +1,6 @@
 require "./codegen.rb"
 require "./parse.rb"
+require "./tokenize.rb"
 
 def int?(str)
   str.to_i.to_s == str.to_s
