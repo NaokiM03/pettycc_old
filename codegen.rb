@@ -95,6 +95,21 @@ def gen(node)
     end
     return
   when NodeKind::FUNCALL then
+    nargs = 0
+    arg = node.args
+
+    while arg
+      gen(arg)
+      nargs += 1
+      arg = arg.next
+    end
+
+    i = nargs - 1
+    while i >= 0
+      puts("  pop #{$argreg[i]}\n")
+      i -= 1
+    end
+
     puts("  call #{node.funcname}\n");
     puts("  push rax\n");
     return
@@ -142,10 +157,9 @@ def gen(node)
   puts("  push rax\n")
 end
 
-$labelseq
-
 def codegen(prog)
   $labelseq = 0;
+  $argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 
   puts(".intel_syntax noprefix\n")
   puts(".global main\n")

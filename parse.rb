@@ -47,7 +47,7 @@ class Node
                 :lhs, :rhs,
                 :cond, :then, :els, :init, :inc,
                 :body,
-                :funcname,
+                :funcname, :args,
                 :lvar, :val
 
   def initialize
@@ -66,6 +66,7 @@ class Node
     @body     = nil      # Block
 
     @funcname = nil      # Function call
+    @args     = nil      #
 
     @lvar     = LVar.new # local variable name
     @val      = nil      # value if kind == NodeKind::NUM
@@ -282,6 +283,23 @@ def unary
   return term()
 end
 
+def func_args
+  if consume?(")")
+    return nil
+  end
+
+  head = assign()
+  cur = head
+
+  while consume?(",")
+    cur.next = assign()
+    cur = cur.next
+  end
+
+  expect(")")
+  return head
+end
+
 def term
   if consume?("(")
     node = expr()
@@ -292,9 +310,9 @@ def term
   tok = consume_ident()
   if tok
     if consume?("(")
-      expect(")")
       node = new_node(NodeKind::FUNCALL)
       node.funcname = strndup(tok.str, tok.len)
+      node.args = func_args()
       return node
     end
 
