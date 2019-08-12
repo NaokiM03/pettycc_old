@@ -35,6 +35,7 @@ module NodeKind
   IF        = "IF"        # "if"
   WHILE     = "WHILE"     # "while"
   FOR       = "FOR"       # "for"
+  BLOCK     = "BLOCK"     # { ... }
   EXPR_STMT = "EXPR_STMT" # Expression statement
   LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
@@ -44,6 +45,7 @@ class Node
   attr_accessor :kind, :next,
                 :lhs, :rhs,
                 :cond, :then, :els, :init, :inc,
+                :body,
                 :lvar, :val
 
   def initialize
@@ -58,6 +60,8 @@ class Node
     @els  = nil      # "if", "while" or "for" statement
     @init = nil      #
     @inc  = nil      #-------------------------------
+
+    @body = nil      # Block
 
     @lvar = LVar.new # local variable name
     @val  = nil      # value if kind == NodeKind::NUM
@@ -170,6 +174,20 @@ def stmt
       expect(")")
     end
     node.then = stmt()
+    return node
+  end
+
+  if consume?("{")
+    head = Node.new
+    cur = head
+
+    while !consume?("}")
+      cur.next = stmt()
+      cur = cur.next
+    end
+
+    node = new_node(NodeKind::BLOCK)
+    node.body = head.next
     return node
   end
 

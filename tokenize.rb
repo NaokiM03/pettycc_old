@@ -112,7 +112,8 @@ def tokenize()
       next
     end
 
-    if ["+", "-", "*", "/", "(", ")", "<", ">", ";", "="].include?(p[0])
+    if ["+", "-", "*", "/",
+        "(", ")", "<", ">", ";", "=", "{", "}"].include?(p[0])
       cur = new_token(TokenKind::RESERVED, cur, next_cur(p), 1)
       next
     end

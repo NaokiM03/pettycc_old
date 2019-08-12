@@ -85,6 +85,15 @@ def gen(node)
     puts("  jmp .Lbegin#{seq}\n")
     puts(".Lend#{seq}:\n")
     return
+  when NodeKind::BLOCK then
+    n = node.body
+    loop do
+      break if n.nil?
+      gen(n)
+      break if n.next.nil?
+      n = n.next
+    end
+    return
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
