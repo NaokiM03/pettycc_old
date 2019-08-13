@@ -227,7 +227,16 @@ def emit_data(prog)
   while vl
     var = vl.var
     puts("#{var.name}:\n")
-    puts("  .zero #{size_of(var.ty)}\n")
+
+    if !var.contents
+      puts("  .zero #{size_of(var.ty)}\n")
+      vl = vl.next
+      next
+    end
+
+    var.cont_len.times{|i|
+      puts("  .byte #{var.contents[i].ord}\n")
+    }
 
     vl = vl.next
   end

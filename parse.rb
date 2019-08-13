@@ -1,5 +1,7 @@
 class Var
-  attr_accessor :name, :ty, :is_local, :offset
+  attr_accessor :name, :ty, :is_local,
+                :offset,
+                :contents, :cont_len
 
   def initialize
     @name   = nil
@@ -7,6 +9,9 @@ class Var
     @is_local = nil
 
     @offset = nil
+
+    @contents = nil
+    @cont_len = nil
   end
 end
 
@@ -178,6 +183,14 @@ def push_var(name, ty, is_local)
   end
 
   return var
+end
+
+$cnt = 0
+
+def new_label
+  str = ".L.data.#{$cnt}"
+  $cnt += 1
+  return str
 end
 
 def is_function
@@ -504,18 +517,18 @@ def func_args
 end
 
 def term
+  tok = nil
   if consume?("(")
     node = expr()
     expect(")")
     return node
   end
 
-  if consume?("sizeof")
+  if tok = consume?("sizeof")
     return new_unary(NodeKind::SIZEOF, unary())
   end
 
-  tok = consume_ident()
-  if tok
+  if tok = consume_ident()
     if consume?("(")
       node = new_node(NodeKind::FUNCALL)
       node.funcname = strndup(tok.str, tok.len)
@@ -528,6 +541,21 @@ def term
       error("undefined variable")
     end
     return new_var(var)
+  end
+
+  tok = $token
+  if tok.kind == TokenKind::STR
+    $token = $token.next
+
+    ty = array_of(char_type(), tok.cont_len)
+    var = push_var(new_label(), ty, false)
+    var.contents = tok.contents
+    var.cont_len = tok.cont_len
+    return new_var(var)
+  end
+
+  if tok.kind != TokenKind::NUM
+    error("expected expression")
   end
 
   return new_num(expect_number())

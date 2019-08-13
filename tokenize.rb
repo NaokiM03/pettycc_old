@@ -1,12 +1,15 @@
 module TokenKind
   RESERVED = "RESERVED"
-  IDENT = "IDENT"
-  NUM = "NUM"
-  EOF = "EOF"
+  IDENT    = "IDENT"
+  STR      = "STR"
+  NUM      = "NUM"
+  EOF      = "EOF"
 end
 
 class Token
-  attr_accessor :kind, :next, :val, :str, :len, :cur
+  attr_accessor :kind, :next, :val, :str, :len,
+                :contents, :cont_len,
+                :cur
 
   def initialize
     @kind = nil
@@ -14,6 +17,9 @@ class Token
     @val  = nil
     @str  = nil
     @len  = nil
+
+    @contents = nil # String literal contents including terminating "\0"
+    @cont_len = nil # String literal length
 
     @cur  = nil
   end
@@ -139,6 +145,23 @@ def tokenize()
         str += next_cur(p)
       end
       cur = new_token(TokenKind::IDENT, cur, str, str.length)
+      next
+    end
+
+    if p[0] == '"'
+      next_cur(p)
+      str = ""
+      while p[0] && p[0] != '"'
+        str += next_cur(p)
+      end
+      str += "\0"
+      next_cur(p)
+      if !p[0]
+        error("unclosed string literal")
+      end
+      cur = new_token(TokenKind::STR, cur, str, str.length)
+      cur.contents = str
+      cur.cont_len = str.length
       next
     end
 
