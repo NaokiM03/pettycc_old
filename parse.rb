@@ -410,7 +410,18 @@ def unary
   if consume?("*")
     return new_unary(NodeKind::DEREF, unary())
   end
-  return term()
+  return postfix()
+end
+
+def postfix
+  node = term()
+
+  while consume?("[")
+    exp = new_binary(NodeKind::ADD, node, expr())
+    expect("]")
+    node = new_unary(NodeKind::DEREF, exp)
+  end
+  return node
 end
 
 def func_args
