@@ -209,8 +209,14 @@ def program
 end
 
 def basetype
-  expect("int")
-  ty = int_type()
+  ty = nil
+  if consume?("char")
+    ty = char_type()
+  else
+    expect("int")
+    ty = int_type()
+  end
+
   while consume?("*")
     ty = pointer_to(ty)
   end
@@ -307,6 +313,10 @@ def read_expr_stmt
   return new_unary(NodeKind::EXPR_STMT, expr())
 end
 
+def is_typename
+  return peek("char") || peek("int")
+end
+
 def stmt
   if consume?("return")
     node = new_unary(NodeKind::RETURN, expr())
@@ -368,7 +378,7 @@ def stmt
     return node
   end
 
-  if peek("int")
+  if is_typename()
     return declaration()
   end
 

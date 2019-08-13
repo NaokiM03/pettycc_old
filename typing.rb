@@ -1,4 +1,5 @@
 module TypeKind
+  CHAR  = "CHAR"
   INT   = "INT"
   PTR   = "PTR"
   ARRAY = "ARRAY"
@@ -14,32 +15,42 @@ class Type
   end
 end
 
-def int_type
+def new_type(kind)
   ty = Type.new
-  ty.kind = TypeKind::INT
+  ty.kind = kind
   return ty
 end
 
+def char_type()
+  return new_type(TypeKind::CHAR)
+end
+
+def int_type()
+  return new_type(TypeKind::INT)
+end
+
 def pointer_to(base)
-  ty = Type.new
-  ty.kind = TypeKind::PTR
+  ty = new_type(TypeKind::PTR)
   ty.base = base
   return ty
 end
 
 def array_of(base, size)
-  ty = Type.new
-  ty.kind = TypeKind::ARRAY
+  ty = new_type(TypeKind::ARRAY)
   ty.base = base
   ty.array_size = size
   return ty
 end
 
 def size_of(ty)
-  if ty.kind == TypeKind::INT || ty.kind == TypeKind::PTR
+  case ty.kind
+  when TypeKind::CHAR then
+    return 1
+  when TypeKind::INT, TypeKind::PTR then
     return 8
+  else
+    return size_of(ty.base) * ty.array_size
   end
-  return size_of(ty.base) * ty.array_size
 end
 
 def visit(node)

@@ -55,6 +55,9 @@ def error_at(msg)
   exit!
 end
 
+def align_to(n, align)
+  return (n + align - 1) & ~(align - 1)
+end
 
 $token
 $locals
@@ -85,7 +88,7 @@ def main
       var.offset = offset
       vl = vl.next
     end
-    fn.stack_size = offset
+    fn.stack_size = align_to(offset, 8)
 
     fn = fn.next
   end

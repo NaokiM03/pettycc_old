@@ -24,16 +24,25 @@ def gen_lval(node)
   gen_addr(node)
 end
 
-def load
+def load(ty)
   puts("  pop rax\n")
-  puts("  mov rax, [rax]\n")
+  if size_of(ty) == 1
+    puts("  movzx rax, byte ptr [rax]\n")
+  else
+    puts("  mov rax, [rax]\n")
+  end
   puts("  push rax\n")
 end
 
-def store
+def store(ty)
   puts("  pop rdi\n")
   puts("  pop rax\n")
-  puts("  mov [rax], rdi\n")
+
+  if size_of(ty) == 1
+    puts("  mov [rax], dil\n")
+  else
+    puts("  mov [rax], rdi\n")
+  end
   puts("  push rdi\n")
 end
 
@@ -51,13 +60,13 @@ def gen(node)
   when NodeKind::VAR then
     gen_addr(node)
     if node.ty.kind != TypeKind::ARRAY
-      load()
+      load(node.ty)
     end
     return
   when NodeKind::ASSIGN then
     gen_lval(node.lhs)
     gen(node.rhs)
-    store()
+    store(node.ty)
     return
   when NodeKind::ADDR then
     gen_addr(node.lhs)
@@ -65,7 +74,7 @@ def gen(node)
   when NodeKind::DEREF then
     gen(node.lhs)
     if node.ty.kind != TypeKind::ARRAY
-      load()
+      load(node.ty)
     end
     return
   when NodeKind::IF then
@@ -131,8 +140,8 @@ def gen(node)
     return
   when NodeKind::FUNCALL then
     nargs = 0
-    arg = node.args
 
+    arg = node.args
     while arg
       gen(arg)
       nargs += 1
@@ -141,7 +150,7 @@ def gen(node)
 
     i = nargs - 1
     while i >= 0
-      puts("  pop #{$argreg[i]}\n")
+      puts("  pop #{$argreg8[i]}\n")
       i -= 1
     end
 
@@ -224,6 +233,15 @@ def emit_data(prog)
   end
 end
 
+def load_arg(var, idx)
+  sz = size_of(var.ty)
+  if sz == 1
+    puts("  mov [rbp-#{var.offset}], #{$argreg1[idx]}\n")
+  else
+    puts("  mov [rbp-#{var.offset}], #{$argreg8[idx]}\n")
+  end
+end
+
 def emit_text(prog)
   puts(".text\n")
 
@@ -240,8 +258,7 @@ def emit_text(prog)
     i = 0
     vl = fn.params
     while vl
-      var = vl.var
-      puts("  mov [rbp-#{var.offset}], #{$argreg[i]}\n")
+      load_arg(vl.var, i)
       i += 1
       vl = vl.next
     end
@@ -262,7 +279,8 @@ def emit_text(prog)
 end
 
 def codegen(prog)
-  $argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+  $argreg1 = ["dil", "sil", "dl", "cl", "r8b", "r9b"]
+  $argreg8 = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
   $labelseq = 0;
   $funcname
 
