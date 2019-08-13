@@ -109,20 +109,6 @@ class Function
   end
 end
 
-module TypeKind
-  INT = "INT"
-  PTR = "PTR"
-end
-
-class Type
-  attr_accessor :kind, :base
-
-  def initialize
-    @kind = nil
-    @base = nil
-  end
-end
-
 def new_node(kind)
   node = Node.new
   node.kind = kind
@@ -187,10 +173,23 @@ def basetype
   return ty
 end
 
+def read_type_suffix(base)
+  if !consume?("[")
+    return base
+  end
+  sz = expect_number()
+  expect("]")
+  base = read_type_suffix(base)
+  return array_of(base, sz)
+end
+
 def read_func_param
-  vl = VarList.new
   ty = basetype()
-  vl.var = push_var(expect_ident(), ty)
+  name = expect_ident()
+  ty = read_type_suffix(ty)
+
+  vl = VarList.new
+  vl.var = push_var(name, ty)
   return vl
 end
 
@@ -236,7 +235,9 @@ end
 
 def declaration
   ty = basetype()
-  var = push_var(expect_ident(), ty)
+  name = expect_ident()
+  ty = read_type_suffix(ty)
+  var = push_var(name, ty)
 
   if consume?(";")
     return new_node(NodeKind::NULL)

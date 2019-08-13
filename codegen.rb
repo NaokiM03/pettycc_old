@@ -12,6 +12,13 @@ def gen_addr(node)
   error("not an lvalue")
 end
 
+def gen_lval(node)
+  if node.ty.kind == TypeKind::ARRAY
+    error("not an lvalue")
+  end
+  gen_addr(node)
+end
+
 def load
   puts("  pop rax\n")
   puts("  mov rax, [rax]\n")
@@ -38,10 +45,12 @@ def gen(node)
     return
   when NodeKind::VAR then
     gen_addr(node)
-    load()
+    if node.ty.kind != TypeKind::ARRAY
+      load()
+    end
     return
   when NodeKind::ASSIGN then
-    gen_addr(node.lhs)
+    gen_lval(node.lhs)
     gen(node.rhs)
     store()
     return
@@ -50,7 +59,9 @@ def gen(node)
     return
   when NodeKind::DEREF then
     gen(node.lhs)
-    load()
+    if node.ty.kind != TypeKind::ARRAY
+      load()
+    end
     return
   when NodeKind::IF then
     seq = $labelseq
@@ -160,13 +171,13 @@ def gen(node)
 
   case node.kind
   when NodeKind::ADD then
-    if node.ty.kind == TypeKind::PTR
-      puts("  imul rdi, 8\n")
+    if node.ty.base
+      puts("  imul rdi, #{size_of(node.ty.base)}\n")
     end
     puts("  add rax, rdi\n")
   when NodeKind::SUB then
-    if node.ty.kind == TypeKind::PTR
-      puts("  imul rdi, 8\n")
+    if node.ty.base
+      puts("  imul rdi, #{size_of(node.ty.base)}\n")
     end
     puts("  sub rax, rdi\n")
   when NodeKind::MUL then

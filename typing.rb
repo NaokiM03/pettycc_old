@@ -1,3 +1,19 @@
+module TypeKind
+  INT   = "INT"
+  PTR   = "PTR"
+  ARRAY = "ARRAY"
+end
+
+class Type
+  attr_accessor :kind, :base, :array_size
+
+  def initialize
+    @kind       = nil
+    @base       = nil
+    @array_size = nil
+  end
+end
+
 def int_type
   ty = Type.new
   ty.kind = TypeKind::INT
@@ -9,6 +25,21 @@ def pointer_to(base)
   ty.kind = TypeKind::PTR
   ty.base = base
   return ty
+end
+
+def array_of(base, size)
+  ty = Type.new
+  ty.kind = TypeKind::ARRAY
+  ty.base = base
+  ty.array_size = size
+  return ty
+end
+
+def size_of(ty)
+  if ty.kind == TypeKind::INT || ty.kind == TypeKind::PTR
+    return 8
+  end
+  return size_of(ty.base) * ty.array_size
 end
 
 def visit(node)
@@ -50,18 +81,18 @@ def visit(node)
     node.ty = node.var.ty
     return
   when NodeKind::ADD then
-    if node.rhs.ty.kind == TypeKind::PTR
+    if node.rhs.ty.base
       tmp = node.lhs
       node.lhs = node.rhs
       node.rhs = tmp
     end
-    if node.rhs.ty.kind == TypeKind::PTR
+    if node.rhs.ty.base
       error("invalid pointer arithmetic operands")
     end
     node.ty = node.lhs.ty
     return
   when NodeKind::SUB then
-    if node.rhs.ty.kind == TypeKind::PTR
+    if node.rhs.ty.base
       error("invalid pointer arithmetic operands")
     end
     node.ty = node.lhs.ty
@@ -70,10 +101,14 @@ def visit(node)
     node.ty = node.lhs.ty
     return
   when NodeKind::ADDR then
-    node.ty = pointer_to(node.lhs.ty)
+    if node.lhs.ty.kind == TypeKind::ARRAY
+      node.ty = pointer_to(node.lhs.ty.base)
+    else
+      node.ty = pointer_to(node.lhs.ty)
+    end
     return
   when NodeKind::DEREF then
-    if node.lhs.ty.kind != TypeKind::PTR
+    if !node.lhs.ty.base
       error("invalid pointer dereference")
     end
     node.ty = node.lhs.ty.base

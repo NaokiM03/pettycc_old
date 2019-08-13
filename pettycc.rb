@@ -79,8 +79,9 @@ def main
 
     vl = fn.locals
     while vl
-      offset += 8
-      vl.var.offset = offset
+      var = vl.var
+      offset += size_of(var.ty)
+      var.offset = offset
       vl = vl.next
     end
     fn.stack_size = offset
