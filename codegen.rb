@@ -173,7 +173,7 @@ def gen(node)
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
-    puts("  jmp .Lreturn#{$funcname}\n")
+    puts("  jmp .Lreturn.#{$funcname}\n")
     return
   end
 
@@ -269,7 +269,7 @@ def emit_text(prog)
       node = node.next
     end
 
-    puts(".Lreturn#{$funcname}:\n")
+    puts(".Lreturn.#{$funcname}:\n")
     puts("  mov rsp, rbp\n")
     puts("  pop rbp\n")
     puts("  ret\n")
