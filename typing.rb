@@ -42,10 +42,12 @@ def visit(node)
   when NodeKind::NE then
   when NodeKind::LT then
   when NodeKind::LE then
-  when NodeKind::LVAR then
   when NodeKind::FUNCALL then
   when NodeKind::NUM then
     node.ty = int_type()
+    return
+  when NodeKind::LVAR then
+    node.ty = node.lvar.ty
     return
   when NodeKind::ADD then
     if node.rhs.ty.kind == TypeKind::PTR
@@ -71,11 +73,10 @@ def visit(node)
     node.ty = pointer_to(node.lhs.ty)
     return
   when NodeKind::DEREF then
-    if node.lhs.ty.kind == TypeKind::PTR
-      node.ty = node.lhs.ty.base
-    else
-      node.ty = int_type()
+    if node.lhs.ty.kind != TypeKind::PTR
+      error("invalid pointer dereference")
     end
+    node.ty = node.lhs.ty.base
     return
   end
 end

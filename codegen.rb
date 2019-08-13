@@ -27,6 +27,8 @@ end
 
 def gen(node)
   case node.kind
+  when NodeKind::NULL then
+    return
   when NodeKind::NUM then
     puts("  push #{node.val}\n")
     return

@@ -1,9 +1,10 @@
 class LVar
-  attr_accessor :next, :name, :offset
+  attr_accessor :next, :name, :ty, :offset
 
   def initialize
     @next   = nil
     @name   = nil
+    @ty     = Type.new
     @offset = nil
   end
 end
@@ -42,6 +43,7 @@ module NodeKind
   EXPR_STMT = "EXPR_STMT" # Expression statement
   LVAR      = "LVAR"      # Local variable
   NUM       = "NUM"       # Integer
+  NULL      = "NULL"      # Empty statement
 end
 
 class Node
@@ -157,17 +159,28 @@ def program
   return head.next
 end
 
-def push_lvar(name)
+def push_lvar(name, ty)
   var = LVar.new
   var.next = $locals
   var.name = name
+  var.ty = ty
   $locals = var
   return var
 end
 
+def basetype
+  expect("int")
+  ty = int_type()
+  while consume?("*")
+    ty = pointer_to(ty)
+  end
+  return ty
+end
+
 def read_func_param
   param = FuncParam.new
-  param.var = push_lvar(expect_ident())
+  ty = basetype()
+  param.var = push_lvar(expect_ident(), ty)
   return param
 end
 
@@ -192,6 +205,7 @@ def function
   $locals = nil
 
   fn = Function.new
+  basetype()
   fn.name = expect_ident()
   expect("(")
   fn.params = read_func_params()
@@ -208,6 +222,22 @@ def function
   fn.node = head.next
   fn.locals = $locals
   return fn
+end
+
+def declaration
+  ty = basetype()
+  var = push_lvar(expect_ident(), ty)
+
+  if consume?(";")
+    return new_node(NodeKind::NULL)
+  end
+
+  expect("=")
+  lhs = new_lvar(var)
+  rhs = expr()
+  expect(";")
+  node = new_binary(NodeKind::ASSIGN, lhs, rhs)
+  return new_unary(NodeKind::EXPR_STMT, node)
 end
 
 def read_expr_stmt
@@ -273,6 +303,10 @@ def stmt
     node = new_node(NodeKind::BLOCK)
     node.body = head.next
     return node
+  end
+
+  if peek("int")
+    return declaration()
   end
 
   node = read_expr_stmt()
@@ -403,7 +437,7 @@ def term
 
     var = find_lvar(tok)
     if !var
-      var = push_lvar(strndup(tok.str, tok.len))
+      error("undefined variable")
     end
     return new_lvar(var)
   end

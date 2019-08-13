@@ -23,10 +23,17 @@ def strndup(p, len)
   p.dup
 end
 
-def consume?(op)
+def peek(s)
   if $token.kind != TokenKind::RESERVED \
-  || op.length != $token.len \
-  || $token.str != op
+    || s.length != $token.len \
+    || $token.str != s
+    return nil
+  end
+  return $token
+end
+
+def consume?(s)
+  if !peek(s)
     return false
   end
   $token = $token.next
@@ -42,11 +49,9 @@ def consume_ident
   return t
 end
 
-def expect(op)
-  if $token.kind != TokenKind::RESERVED \
-  || op.length != $token.len \
-  || $token.str != op
-    error_at("expected \"#{op}\"")
+def expect(s)
+  if !peek(s)
+    error_at("expected \"#{s}\"")
   end
   $token = $token.next
 end
@@ -84,7 +89,7 @@ def new_token(kind, cur, str, len)
 end
 
 def starts_with_keyword(p)
-  kw = ["return", "if", "else", "while", "for"]
+  kw = ["return", "if", "else", "while", "for", "int"]
 
   kw.length.times{|i|
     len = kw[i].length
