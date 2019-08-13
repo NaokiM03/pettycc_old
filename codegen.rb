@@ -1,7 +1,7 @@
 def gen_addr(node)
   case node.kind
   when NodeKind::VAR then
-    puts("  lea rax, [rbp-#{node.lvar.offset}]\n")
+    puts("  lea rax, [rbp-#{node.var.offset}]\n")
     puts("  push rax\n")
     return
   when NodeKind::DEREF then
@@ -213,12 +213,12 @@ def codegen(prog)
     puts("  sub rsp, #{fn.stack_size}\n")
 
     i = 0
-    p = fn.params
-    while p
-      var = p.var
+    vl = fn.params
+    while vl
+      var = vl.var
       puts("  mov [rbp-#{var.offset}], #{$argreg[i]}\n")
       i += 1
-      p = p.next
+      vl = vl.next
     end
 
     node = fn.node

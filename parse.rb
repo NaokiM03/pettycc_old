@@ -1,23 +1,30 @@
-class LVar
-  attr_accessor :next, :name, :ty, :offset
+class Var
+  attr_accessor :name, :ty, :offset
 
   def initialize
-    @next   = nil
     @name   = nil
     @ty     = Type.new
     @offset = nil
   end
 end
 
-def find_lvar(tok)
-  var = $locals
-  loop do
-    break if var.nil?
+class VarList
+  attr_accessor :next, :var
+
+  def initialize
+    @next   = nil
+    @var    = Var.new
+  end
+end
+
+def find_var(tok)
+  vl = $locals
+  while vl
+    var = vl.var
     if var.name.length == tok.len && tok.str == var.name
       return var
     end
-    break if var.next.nil?
-    var = var.next
+    vl = vl.next
   end
   return nil
 end
@@ -52,7 +59,7 @@ class Node
                 :cond, :then, :els, :init, :inc,
                 :body,
                 :funcname, :args,
-                :lvar, :val
+                :var, :val
 
   def initialize
     @kind     = nil      # NodeKind
@@ -73,7 +80,7 @@ class Node
     @funcname = nil      # Function call
     @args     = nil      #
 
-    @lvar     = LVar.new # local variable name
+    @var     = Var.new  # Variable name
     @val      = nil      # value if kind == NodeKind::NUM
   end
 end
@@ -83,7 +90,7 @@ class FuncParam
 
   def initialize
     @next       = nil
-    @var        = LVar.new
+    @var        = Var.new
   end
 end
 
@@ -141,9 +148,9 @@ def new_num(val)
   return node
 end
 
-def new_lvar(var)
+def new_var(var)
   node = new_node(NodeKind::VAR)
-  node.lvar = var
+  node.var = var
   return node
 end
 
@@ -159,12 +166,15 @@ def program
   return head.next
 end
 
-def push_lvar(name, ty)
-  var = LVar.new
-  var.next = $locals
+def push_var(name, ty)
+  var = Var.new
   var.name = name
   var.ty = ty
-  $locals = var
+
+  vl = VarList.new
+  vl.var = var
+  vl.next = $locals
+  $locals = vl
   return var
 end
 
@@ -178,10 +188,10 @@ def basetype
 end
 
 def read_func_param
-  param = FuncParam.new
+  vl = VarList.new
   ty = basetype()
-  param.var = push_lvar(expect_ident(), ty)
-  return param
+  vl.var = push_var(expect_ident(), ty)
+  return vl
 end
 
 def read_func_params
@@ -226,14 +236,14 @@ end
 
 def declaration
   ty = basetype()
-  var = push_lvar(expect_ident(), ty)
+  var = push_var(expect_ident(), ty)
 
   if consume?(";")
     return new_node(NodeKind::NULL)
   end
 
   expect("=")
-  lhs = new_lvar(var)
+  lhs = new_var(var)
   rhs = expr()
   expect(";")
   node = new_binary(NodeKind::ASSIGN, lhs, rhs)
@@ -435,11 +445,11 @@ def term
       return node
     end
 
-    var = find_lvar(tok)
+    var = find_var(tok)
     if !var
       error("undefined variable")
     end
-    return new_lvar(var)
+    return new_var(var)
   end
 
   return new_num(expect_number())

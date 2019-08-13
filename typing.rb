@@ -47,7 +47,7 @@ def visit(node)
     node.ty = int_type()
     return
   when NodeKind::VAR then
-    node.ty = node.lvar.ty
+    node.ty = node.var.ty
     return
   when NodeKind::ADD then
     if node.rhs.ty.kind == TypeKind::PTR

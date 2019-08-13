@@ -77,11 +77,11 @@ def main
   while fn
     offset = 0
 
-    var = fn.locals
-    while var
+    vl = fn.locals
+    while vl
       offset += 8
-      var.offset = offset
-      var = var.next
+      vl.var.offset = offset
+      vl = vl.next
     end
     fn.stack_size = offset
 
