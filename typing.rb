@@ -113,6 +113,12 @@ def visit(node)
     end
     node.ty = node.lhs.ty.base
     return
+  when NodeKind::SIZEOF then
+    node.kind = NodeKind::NUM
+    node.ty = int_type()
+    node.val = size_of(node.lhs.ty)
+    node.lhs = nil
+    return
   end
 end
 

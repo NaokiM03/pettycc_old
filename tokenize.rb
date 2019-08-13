@@ -89,7 +89,7 @@ def new_token(kind, cur, str, len)
 end
 
 def starts_with_keyword(p)
-  kw = ["return", "if", "else", "while", "for", "int"]
+  kw = ["return", "if", "else", "while", "for", "int", "sizeof"]
 
   kw.length.times{|i|
     len = kw[i].length

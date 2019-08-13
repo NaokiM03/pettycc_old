@@ -45,6 +45,7 @@ module NodeKind
   IF        = "IF"        # "if"
   WHILE     = "WHILE"     # "while"
   FOR       = "FOR"       # "for"
+  SIZEOF    = "SIZEOF"    # "sizeof"
   BLOCK     = "BLOCK"     # { ... }
   FUNCALL   = "FUNCALL"   # Function call
   EXPR_STMT = "EXPR_STMT" # Expression statement
@@ -446,6 +447,10 @@ def term
     node = expr()
     expect(")")
     return node
+  end
+
+  if consume?("sizeof")
+    return new_unary(NodeKind::SIZEOF, unary())
   end
 
   tok = consume_ident()
