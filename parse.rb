@@ -41,7 +41,7 @@ module NodeKind
   BLOCK     = "BLOCK"     # { ... }
   FUNCALL   = "FUNCALL"   # Function call
   EXPR_STMT = "EXPR_STMT" # Expression statement
-  LVAR      = "LVAR"      # Local variable
+  VAR       = "VAR"       # Variable
   NUM       = "NUM"       # Integer
   NULL      = "NULL"      # Empty statement
 end
@@ -142,7 +142,7 @@ def new_num(val)
 end
 
 def new_lvar(var)
-  node = new_node(NodeKind::LVAR)
+  node = new_node(NodeKind::VAR)
   node.lvar = var
   return node
 end

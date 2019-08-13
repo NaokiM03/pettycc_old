@@ -46,7 +46,7 @@ def visit(node)
   when NodeKind::NUM then
     node.ty = int_type()
     return
-  when NodeKind::LVAR then
+  when NodeKind::VAR then
     node.ty = node.lvar.ty
     return
   when NodeKind::ADD then

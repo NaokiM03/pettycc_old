@@ -1,6 +1,6 @@
 def gen_addr(node)
   case node.kind
-  when NodeKind::LVAR then
+  when NodeKind::VAR then
     puts("  lea rax, [rbp-#{node.lvar.offset}]\n")
     puts("  push rax\n")
     return
@@ -36,7 +36,7 @@ def gen(node)
     gen(node.lhs)
     puts("  add rsp, 8\n")
     return
-  when NodeKind::LVAR then
+  when NodeKind::VAR then
     gen_addr(node)
     load()
     return
