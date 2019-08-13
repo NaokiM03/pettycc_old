@@ -123,7 +123,7 @@ def visit(node)
 end
 
 def add_type(prog)
-  fn = prog
+  fn = prog.fns
   while fn
     node = fn.node
     while node

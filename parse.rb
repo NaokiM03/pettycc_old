@@ -1,9 +1,11 @@
 class Var
-  attr_accessor :name, :ty, :offset
+  attr_accessor :name, :ty, :is_local, :offset
 
   def initialize
     @name   = nil
     @ty     = Type.new
+    @is_local = nil
+
     @offset = nil
   end
 end
@@ -25,6 +27,14 @@ def find_var(tok)
       return var
     end
     vl = vl.next
+  end
+
+  vl = $globals
+  while vl
+    var = vl.var
+    if var.name.length == tok.len && tok.str == var.name
+      return var
+    end
   end
   return nil
 end
@@ -110,6 +120,15 @@ class Function
   end
 end
 
+class Program
+  attr_accessor :globals, :fns
+
+  def initialize
+    @globals = VarList.new
+    @fns     = Function.new
+  end
+end
+
 def new_node(kind)
   node = Node.new
   node.kind = kind
@@ -141,28 +160,52 @@ def new_var(var)
   return node
 end
 
-def program
-  head = Function.new
-  cur = head
-
-  while !at_eof()
-    cur.next = function()
-    cur = cur.next
-  end
-
-  return head.next
-end
-
-def push_var(name, ty)
+def push_var(name, ty, is_local)
   var = Var.new
   var.name = name
   var.ty = ty
+  var.is_local = is_local
 
   vl = VarList.new
   vl.var = var
-  vl.next = $locals
-  $locals = vl
+
+  if is_local
+    vl.next = $locals
+    $locals = vl
+  else
+    vl.next = $globals
+    $globals = vl  
+  end
+
   return var
+end
+
+def is_function
+  tok = $token
+  basetype()
+  isfunc = consume_ident() && consume?("(")
+  $token = tok
+  return isfunc
+end
+
+def program
+  head = Function.new
+  cur = head
+  $globals = nil
+
+  while !at_eof()
+    if is_function()
+      cur.next = function()
+      cur = cur.next
+    else
+      global_var()
+    end
+  end
+
+  prog = Program.new
+  prog.globals = $globals
+  prog.fns = head.next
+  return prog
 end
 
 def basetype
@@ -190,7 +233,7 @@ def read_func_param
   ty = read_type_suffix(ty)
 
   vl = VarList.new
-  vl.var = push_var(name, ty)
+  vl.var = push_var(name, ty, true)
   return vl
 end
 
@@ -234,11 +277,19 @@ def function
   return fn
 end
 
+def global_var
+  ty = basetype()
+  name = expect_ident()
+  ty = read_type_suffix(ty)
+  expect(";")
+  push_var(name, ty, false)
+end
+
 def declaration
   ty = basetype()
   name = expect_ident()
   ty = read_type_suffix(ty)
-  var = push_var(name, ty)
+  var = push_var(name, ty, true)
 
   if consume?(";")
     return new_node(NodeKind::NULL)

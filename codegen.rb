@@ -1,8 +1,13 @@
 def gen_addr(node)
   case node.kind
   when NodeKind::VAR then
-    puts("  lea rax, [rbp-#{node.var.offset}]\n")
-    puts("  push rax\n")
+    var = node.var
+    if var.is_local
+      puts("  lea rax, [rbp-#{var.offset}]\n")
+      puts("  push rax\n")
+    else
+      puts("  push offset #{var.name}\n")
+    end
     return
   when NodeKind::DEREF then
     gen(node.lhs)
@@ -206,14 +211,23 @@ def gen(node)
   puts("  push rax\n")
 end
 
-def codegen(prog)
-  $argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-  $labelseq = 0;
-  $funcname
+def emit_data(prog)
+  puts(".data\n")
 
-  puts(".intel_syntax noprefix\n")
+  vl = prog.globals
+  while vl
+    var = vl.var
+    puts("#{var.name}:\n")
+    puts("  .zero #{size_of(var.ty)}\n")
 
-  fn = prog
+    vl = vl.next
+  end
+end
+
+def emit_text(prog)
+  puts(".text\n")
+
+  fn = prog.fns
   while fn
     puts(".global #{fn.name}\n")
     puts("#{fn.name}:\n")
@@ -245,4 +259,14 @@ def codegen(prog)
 
     fn = fn.next
   end
+end
+
+def codegen(prog)
+  $argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+  $labelseq = 0;
+  $funcname
+
+  puts(".intel_syntax noprefix\n")
+  emit_data(prog)
+  emit_text(prog)
 end

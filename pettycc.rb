@@ -58,6 +58,7 @@ end
 
 $token
 $locals
+$globals
 $user_input
 $user_input_cur
 
@@ -73,7 +74,7 @@ def main
   prog = program()
   add_type(prog)
 
-  fn = prog
+  fn = prog.fns
   while fn
     offset = 0
 
