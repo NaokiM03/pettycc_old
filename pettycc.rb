@@ -16,7 +16,7 @@ def alpha?(c)
 end
 
 def alnum?(c)
-  (c =~ /\A[A-Za-z0-9]+\z/) == 0
+  (c =~ /\A[A-Za-z0-9]+\z/) == 0 || c == "_"
 end
 
 def next_cur(p)
