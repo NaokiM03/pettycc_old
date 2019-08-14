@@ -44,6 +44,7 @@ module NodeKind
   BLOCK     = "BLOCK"     # { ... }
   FUNCALL   = "FUNCALL"   # Function call
   EXPR_STMT = "EXPR_STMT" # Expression statement
+  STMT_EXPR = "STMT_EXPR" # Statement expression
   VAR       = "VAR"       # Variable
   NUM       = "NUM"       # Integer
   NULL      = "NULL"      # Empty statement
@@ -490,6 +491,25 @@ def postfix
   return node
 end
 
+def stmt_expr
+  node = new_node(NodeKind::STMT_EXPR)
+  node.body = stmt()
+  cur = node.body
+
+  while !consume?("}")
+    cur.next = stmt()
+    cur = cur.next
+  end
+  expect(")")
+
+  if cur.kind != NodeKind::EXPR_STMT
+    error("stmt expr returning void is not supported")
+  end
+  cur = cur.lhs
+  # pp node
+  return node
+end
+
 def func_args
   if consume?(")")
     return nil
@@ -509,7 +529,10 @@ end
 
 def term
   tok = nil
-  if consume?("(")
+  if tok = consume?("(")
+    if consume?("{")
+      return stmt_expr()
+    end
     node = expr()
     expect(")")
     return node

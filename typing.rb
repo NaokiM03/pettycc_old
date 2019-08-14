@@ -130,6 +130,14 @@ def visit(node)
     node.val = size_of(node.lhs.ty)
     node.lhs = nil
     return
+  when NodeKind::STMT_EXPR then
+    # last = node.body
+    # while last.next
+    #   last = last.next
+    # end
+    # node.ty = last.ty
+    node.body = remove_last_expr_stmt(node.body)
+    return
   end
 end
 
@@ -143,4 +151,13 @@ def add_type(prog)
     end
     fn = fn.next
   end
+end
+
+def remove_last_expr_stmt(node)
+  if node.next.nil?
+    node = node.lhs
+    return node
+  end
+  node.next = remove_last_expr_stmt(node.next)
+  return node
 end

@@ -131,7 +131,7 @@ def gen(node)
     puts("  jmp .Lbegin#{seq}\n")
     puts(".Lend#{seq}:\n")
     return
-  when NodeKind::BLOCK then
+  when NodeKind::BLOCK, NodeKind::STMT_EXPR then
     n = node.body
     while n
       gen(n)
