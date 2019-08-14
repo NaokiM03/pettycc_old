@@ -106,6 +106,55 @@ def starts_with_keyword(p)
   return nil
 end
 
+def get_escape_char(c)
+  case c
+  when "a" then
+    return "\a"
+  when "b" then
+    return "\b"
+  when "t" then
+    return "\t"
+  when "n" then
+    return "\n"
+  when "v" then
+    return "\v"
+  when "f" then
+    return "\f"
+  when "r" then
+    return "\r"
+  when "e" then
+    return "27"
+  else
+    return c
+  end
+end
+
+def read_string_literal(cur, p)
+  next_cur(p)
+  str = ""
+  while p[0] && p[0] != '"'
+    str += if p[0] == "\\"
+      next_cur(p)
+      s = next_cur(p)
+      get_escape_char(s)
+    else
+      next_cur(p)
+    end
+    if str.length == 1024
+      error("string literal too large")
+    end
+  end
+  str += "\0"
+  next_cur(p)
+  if !p[0]
+    error("unclosed string literal")
+  end
+  cur = new_token(TokenKind::STR, cur, str, str.length)
+  cur.contents = str
+  cur.cont_len = str.length
+  return cur
+end
+
 def tokenize()
   p = $user_input.dup
   cur = Token.new
@@ -149,19 +198,7 @@ def tokenize()
     end
 
     if p[0] == '"'
-      next_cur(p)
-      str = ""
-      while p[0] && p[0] != '"'
-        str += next_cur(p)
-      end
-      str += "\0"
-      next_cur(p)
-      if !p[0]
-        error("unclosed string literal")
-      end
-      cur = new_token(TokenKind::STR, cur, str, str.length)
-      cur.contents = str
-      cur.cont_len = str.length
+      cur = read_string_literal(cur, p)
       next
     end
 

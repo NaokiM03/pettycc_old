@@ -234,6 +234,13 @@ def emit_data(prog)
       next
     end
 
+    if var.contents == "27\0"
+      puts("  .byte #{27}\n")
+      puts("  .byte #{0}\n")
+      vl = vl.next
+      next
+    end
+
     var.cont_len.times{|i|
       puts("  .byte #{var.contents[i].ord}\n")
     }
