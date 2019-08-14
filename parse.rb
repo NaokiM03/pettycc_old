@@ -506,7 +506,6 @@ def stmt_expr
     error("stmt expr returning void is not supported")
   end
   cur = cur.lhs
-  # pp node
   return node
 end
 
