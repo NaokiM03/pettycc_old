@@ -40,10 +40,11 @@ end
 
 def consume?(s)
   if !peek(s)
-    return false
+    return nil
   end
+  t = $token
   $token = $token.next
-  return true
+  return t
 end
 
 def consume_ident
@@ -103,6 +104,15 @@ def starts_with_keyword(p)
       return kw[i]
     end
   }
+
+  ops = ["==", "!=", "<=", ">="]
+
+  ops.length.times{|i|
+    if startswith(p, ops[i])
+      return ops[i]
+    end
+  }
+
   return nil
 end
 
@@ -157,8 +167,8 @@ end
 
 def tokenize()
   p = $user_input.dup
-  cur = Token.new
-  $token = cur
+  head = Token.new
+  cur = head
 
   while p.length != 0
     if p[0] == " "
@@ -171,13 +181,6 @@ def tokenize()
       len = kw.length
       str = n_next_cur(p, len)
       cur = new_token(TokenKind::RESERVED, cur, str, len)
-      next
-    end
-
-    if startswith(p, "==") || startswith(p, "!=") ||
-        startswith(p, "<=") || startswith(p, ">=")
-      op = n_next_cur(p, 2)
-      cur = new_token(TokenKind::RESERVED, cur, op, 2)
       next
     end
 
@@ -217,6 +220,6 @@ def tokenize()
     error_at("invalid token")
   end
 
-  new_token(TokenKind::EOF, cur, p[0], 0)
-  $token = $token.next
+  new_token(TokenKind::EOF, cur, "\0", 0)
+  head = head.next
 end

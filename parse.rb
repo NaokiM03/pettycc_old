@@ -24,26 +24,6 @@ class VarList
   end
 end
 
-def find_var(tok)
-  vl = $locals
-  while vl
-    var = vl.var
-    if var.name.length == tok.len && tok.str == var.name
-      return var
-    end
-    vl = vl.next
-  end
-
-  vl = $globals
-  while vl
-    var = vl.var
-    if var.name.length == tok.len && tok.str == var.name
-      return var
-    end
-  end
-  return nil
-end
-
 module NodeKind
   ADD       = "ADD"       # +
   SUB       = "SUB"       # -
@@ -101,15 +81,6 @@ class Node
   end
 end
 
-class FuncParam
-  attr_accessor :next, :var
-
-  def initialize
-    @next       = nil
-    @var        = Var.new
-  end
-end
-
 class Function
   attr_accessor :next, :name, :params,
                 :node, :locals, :stack_size
@@ -132,6 +103,26 @@ class Program
     @globals = VarList.new
     @fns     = Function.new
   end
+end
+
+def find_var(tok)
+  vl = $locals
+  while vl
+    var = vl.var
+    if var.name.length == tok.len && tok.str == var.name
+      return var
+    end
+    vl = vl.next
+  end
+
+  vl = $globals
+  while vl
+    var = vl.var
+    if var.name.length == tok.len && tok.str == var.name
+      return var
+    end
+  end
+  return nil
 end
 
 def new_node(kind)

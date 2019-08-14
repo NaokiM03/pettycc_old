@@ -166,8 +166,8 @@ def gen(node)
     puts("  sub rsp, 8\n")
     puts("  mov rax, 0\n")
     puts("  call #{node.funcname}\n")
-    printf("  add rsp, 8\n")
-    printf(".Lend#{seq}:\n")
+    puts("  add rsp, 8\n")
+    puts(".Lend#{seq}:\n")
     puts("  push rax\n")
     return
   when NodeKind::RETURN then
