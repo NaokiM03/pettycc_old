@@ -51,12 +51,21 @@ end
 
 def error_at(msg)
   pos = $token.cur || 0
-  STDERR.puts("#{ARGV[0]}\n" + "#{" "*pos + "^ " + msg}\n")
+  pos = pos - $token.str.length + 1
+  STDERR.puts($user_input + "#{" " * pos + "^ " + msg}\n")
   exit!
 end
 
 def align_to(n, align)
   return (n + align - 1) & ~(align - 1)
+end
+
+def read_file(path)
+  begin
+    File.read(path)
+  rescue => e
+    puts("class=#{e.class} message=#{e.message}")
+  end
 end
 
 $token
@@ -71,7 +80,7 @@ def main
   end
 
   # Tokenize and parse
-  $user_input = ARGV[0]
+  $user_input = read_file(ARGV[0])
   $user_input_cur = -1
   $token = tokenize()
   prog = program()

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 cat <<EOF | gcc -xc -c -o tmp2.o -
 int ret3() { return 3; }
 int ret5() { return 5; }
@@ -13,7 +13,7 @@ assert() {
   expected="$1"
   input="$2"
 
-  ruby ./pettycc.rb "$input" > tmp.s
+  ruby ./pettycc.rb <(echo "$input") > tmp.s
   gcc -static -no-pie -o tmp tmp.s tmp2.o
   ./tmp
   actual="$?"

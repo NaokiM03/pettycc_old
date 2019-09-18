@@ -217,6 +217,11 @@ def tokenize()
       next
     end
 
+    if p[0] = "\n"
+      p.slice!(0)
+      next
+    end
+
     error_at("invalid token")
   end
 
