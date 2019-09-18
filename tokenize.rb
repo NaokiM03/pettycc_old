@@ -176,6 +176,21 @@ def tokenize()
       next
     end
 
+    if startswith(p, "//")
+      p.slice!(0, 2)
+      while !startswith(p, "\n")
+        p.slice!(0)
+      end
+    end
+
+    if startswith(p, "/*")
+      p.slice!(0, 2)
+      while !startswith(p, "*/")
+        p.slice!(0)
+      end
+      p.slice!(0, 2)
+    end
+
     kw = starts_with_keyword(p)
     if kw
       len = kw.length
