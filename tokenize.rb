@@ -38,7 +38,7 @@ def peek(s)
   return $token
 end
 
-def consume?(s)
+def consume(s)
   if !peek(s)
     return nil
   end
@@ -90,7 +90,7 @@ def new_token(kind, cur, str, len)
   tok.kind = kind
   tok.str = str
   tok.len = len
-  tok.cur = $user_input_cur
+  tok.cur = $user_input_cur - tok.len
   cur.next = tok
   return tok
 end
@@ -133,7 +133,7 @@ def get_escape_char(c)
   when "r" then
     return "\r"
   when "e" then
-    return "27"
+    return "\e"
   else
     return c
   end
@@ -150,7 +150,7 @@ def read_string_literal(cur, p)
     else
       next_cur(p)
     end
-    if str.length == 1024
+    if str.length >= 1024
       error("string literal too large")
     end
   end
@@ -178,17 +178,22 @@ def tokenize()
 
     if startswith(p, "//")
       p.slice!(0, 2)
+      $user_input_cur += 2
       while !startswith(p, "\n")
         p.slice!(0)
+        $user_input_cur += 1
       end
     end
 
     if startswith(p, "/*")
       p.slice!(0, 2)
+      $user_input_cur += 2
       while !startswith(p, "*/")
         p.slice!(0)
+        $user_input_cur += 1
       end
       p.slice!(0, 2)
+      $user_input_cur += 2
     end
 
     kw = starts_with_keyword(p)
@@ -226,9 +231,8 @@ def tokenize()
       while int?(p[0])
         num += next_cur(p)
       end
-      cur = new_token(TokenKind::NUM, cur, num, 0)
+      cur = new_token(TokenKind::NUM, cur, num, q.length - p.length)
       cur.val = num.to_i
-      cur.len = q.length - p.length
       next
     end
 

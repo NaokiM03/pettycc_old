@@ -5,7 +5,7 @@ class Var
 
   def initialize
     @name   = nil
-    @ty     = Type.new
+    @ty     = nil
     @is_local = nil
 
     @offset = nil
@@ -25,8 +25,11 @@ class VarList
 end
 
 module NodeKind
-  ADD       = "ADD"       # +
-  SUB       = "SUB"       # -
+  ADD       = "ADD"       # num + num
+  PTR_ADD   = "PTR_ADD"   # ptr + num or num + ptr
+  SUB       = "SUB"       # num - num
+  PTR_SUB   = "PTR_SUB"   # ptr - num
+  PTR_DIFF  = "PTR_DIFF"  # ptr - ptr
   MUL       = "MUL"       # *
   DIV       = "DIV"       # /
   EQ        = "EQ"        # ==
@@ -61,7 +64,7 @@ class Node
   def initialize
     @kind     = nil      # NodeKind
     @next     = nil      # Next node
-    @ty       = Type.new # Type
+    @ty       = nil      # Type
 
     @lhs      = nil      # Left-hand side
     @rhs      = nil      # Right-hand side
@@ -107,21 +110,13 @@ class Program
 end
 
 def find_var(tok)
-  vl = $locals
+  vl = $scope
   while vl
     var = vl.var
     if var.name.length == tok.len && tok.str == var.name
       return var
     end
     vl = vl.next
-  end
-
-  vl = $globals
-  while vl
-    var = vl.var
-    if var.name.length == tok.len && tok.str == var.name
-      return var
-    end
   end
   return nil
 end
@@ -151,29 +146,42 @@ def new_num(val)
   return node
 end
 
-def new_var(var)
+def new_var_node(var)
   node = new_node(NodeKind::VAR)
   node.var = var
   return node
 end
 
-def push_var(name, ty, is_local)
+def new_var(name, ty, is_local)
   var = Var.new
   var.name = name
   var.ty = ty
   var.is_local = is_local
 
+  sc = VarList.new
+  sc.var = var
+  sc.next = $scope
+  $scope = sc
+  return var
+end
+
+def new_lvar(name, ty)
+  var = new_var(name, ty, true)
+
   vl = VarList.new
   vl.var = var
+  vl.next = $locals
+  $locals = vl
+  return var
+end
 
-  if is_local
-    vl.next = $locals
-    $locals = vl
-  else
-    vl.next = $globals
-    $globals = vl  
-  end
+def new_gvar(name, ty)
+  var = new_var(name, ty, false)
 
+  vl = VarList.new
+  vl.var = var
+  vl.next = $globals
+  $globals = vl
   return var
 end
 
@@ -188,9 +196,10 @@ end
 def is_function
   tok = $token
   basetype()
-  isfunc = consume_ident() && consume?("(")
+
+  is_func = consume_ident() && consume("(")
   $token = tok
-  return isfunc
+  return !!is_func
 end
 
 def program
@@ -215,21 +224,21 @@ end
 
 def basetype
   ty = nil
-  if consume?("char")
+  if consume("char")
     ty = char_type()
   else
     expect("int")
     ty = int_type()
   end
 
-  while consume?("*")
+  while consume("*")
     ty = pointer_to(ty)
   end
   return ty
 end
 
 def read_type_suffix(base)
-  if !consume?("[")
+  if !consume("[")
     return base
   end
   sz = expect_number()
@@ -244,19 +253,19 @@ def read_func_param
   ty = read_type_suffix(ty)
 
   vl = VarList.new
-  vl.var = push_var(name, ty, true)
+  vl.var = new_lvar(name, ty)
   return vl
 end
 
 def read_func_params
-  if consume?(")")
+  if consume(")")
     return nil
   end
 
   head = read_func_param()
   cur = head
 
-  while !consume?(")")
+  while !consume(")")
     expect(",")
     cur.next = read_func_param()
     cur = cur.next
@@ -272,16 +281,19 @@ def function
   basetype()
   fn.name = expect_ident()
   expect("(")
+
+  sc = $scope
   fn.params = read_func_params()
   expect("{")
 
   head = Node.new
   cur = head
 
-  while !consume?("}")
+  while !consume("}")
     cur.next = stmt()
     cur = cur.next
   end
+  $scope = sc
 
   fn.node = head.next
   fn.locals = $locals
@@ -293,21 +305,21 @@ def global_var
   name = expect_ident()
   ty = read_type_suffix(ty)
   expect(";")
-  push_var(name, ty, false)
+  new_gvar(name, ty)
 end
 
 def declaration
   ty = basetype()
   name = expect_ident()
   ty = read_type_suffix(ty)
-  var = push_var(name, ty, true)
+  var = new_lvar(name, ty)
 
-  if consume?(";")
+  if consume(";")
     return new_node(NodeKind::NULL)
   end
 
   expect("=")
-  lhs = new_var(var)
+  lhs = new_var_node(var)
   rhs = expr()
   expect(";")
   node = new_binary(NodeKind::ASSIGN, lhs, rhs)
@@ -323,25 +335,31 @@ def is_typename
 end
 
 def stmt
-  if consume?("return")
+  node = stmt2()
+  add_type(node)
+  return node
+end
+
+def stmt2
+  if consume("return")
     node = new_unary(NodeKind::RETURN, expr())
     expect(";")
     return node
   end
 
-  if consume?("if")
+  if consume("if")
     node = new_node(NodeKind::IF)
     expect("(")
     node.cond = expr()
     expect(")")
     node.then = stmt()
-    if consume?("else")
+    if consume("else")
       node.els = stmt()
     end
     return node
   end
 
-  if consume?("while")
+  if consume("while")
     node = new_node(NodeKind::WHILE)
     expect("(")
     node.cond = expr()
@@ -350,18 +368,18 @@ def stmt
     return node
   end
 
-  if consume?("for")
+  if consume("for")
     node = new_node(NodeKind::FOR)
     expect("(")
-    if !consume?(";")
+    if !consume(";")
       node.init = read_expr_stmt()
       expect(";")
     end
-    if !consume?(";")
+    if !consume(";")
       node.cond = expr()
       expect(";")
     end
-    if !consume?(")")
+    if !consume(")")
       node.inc = read_expr_stmt()
       expect(")")
     end
@@ -369,14 +387,16 @@ def stmt
     return node
   end
 
-  if consume?("{")
+  if consume("{")
     head = Node.new
     cur = head
 
-    while !consume?("}")
+    sc = $scope
+    while !consume("}")
       cur.next = stmt()
       cur = cur.next
     end
+    $scope = sc
 
     node = new_node(NodeKind::BLOCK)
     node.body = head.next
@@ -398,7 +418,7 @@ end
 
 def assign
   node = equality()
-  if consume?("=")
+  if consume("=")
     node = new_binary(NodeKind::ASSIGN, node, assign())
   end
   return node
@@ -408,9 +428,9 @@ def equality
   node = relational()
 
   loop do
-    if consume?("==")
+    if consume("==")
       node = new_binary(NodeKind::EQ, node, relational())
-    elsif consume?("!=")
+    elsif consume("!=")
       node = new_binary(NodeKind::NE, node, relational())
     else
       return node
@@ -422,13 +442,13 @@ def relational
   node = add()
 
   loop do
-    if consume?("<")
+    if consume("<")
       node = new_binary(NodeKind::LT, node, add())
-    elsif consume?("<=")
+    elsif consume("<=")
       node = new_binary(NodeKind::LE, node, add())
-    elsif consume?(">")
+    elsif consume(">")
       node = new_binary(NodeKind::LT, add(), node)
-    elsif consume?(">=")
+    elsif consume(">=")
       node = new_binary(NodeKind::LE, add(), node)
     else
       return node
@@ -436,14 +456,54 @@ def relational
   end
 end
 
+def new_add(lhs, rhs)
+  add_type(lhs)
+  add_type(rhs)
+
+  # puts !!is_integer(lhs.ty) && !!is_integer(rhs.ty)
+  # puts !!lhs.ty.base && !!is_integer(rhs.ty)
+  # puts !!is_integer(lhs.ty) && !!rhs.ty.base
+
+  if !!is_integer(lhs.ty) && !!is_integer(rhs.ty)
+    return new_binary(NodeKind::ADD, lhs, rhs)
+  end
+  if !!lhs.ty.base && !!is_integer(rhs.ty)
+    return new_binary(NodeKind::PTR_ADD, lhs, rhs)
+  end
+  if !!is_integer(lhs.ty) && !!rhs.ty.base
+    return new_binary(NodeKind::PTR_ADD, rhs, lhs)
+  end
+  error_at("invalid operands")
+end
+
+def new_sub(lhs, rhs)
+  add_type(lhs)
+  add_type(rhs)
+
+  # puts !!is_integer(lhs.ty) && !!is_integer(rhs.ty)
+  # puts !!lhs.ty.base && !!is_integer(rhs.ty)
+  # puts !!is_integer(lhs.ty) && !!rhs.ty.base
+
+  if !!is_integer(lhs.ty) && !!is_integer(rhs.ty)
+    return new_binary(NodeKind::SUB, lhs, rhs)
+  end
+  if !!lhs.ty.base && !!is_integer(rhs.ty)
+    return new_binary(NodeKind::PTR_SUB, lhs, rhs)
+  end
+  if !!is_integer(lhs.ty) && !!rhs.ty.base
+    return new_binary(NodeKind::PTR_DIFF, rhs, lhs)
+  end
+  error("invalid operands")
+end
+
 def add
   node = mul()
 
   loop do
-    if consume?("+")
-      node = new_binary(NodeKind::ADD, node, mul())
-    elsif consume?("-")
-      node = new_binary(NodeKind::SUB, node, mul())
+    if consume("+")
+      node = new_add(node, mul())
+    elsif consume("-")
+      node = new_sub(node, mul())
     else
       return node
     end
@@ -454,9 +514,9 @@ def mul
   node = unary()
 
   loop do
-    if consume?("*")
+    if consume("*")
       node = new_binary(NodeKind::MUL, node, unary())
-    elsif consume?("/")
+    elsif consume("/")
       node = new_binary(NodeKind::DIV, node, unary())
     else
       return node
@@ -465,26 +525,26 @@ def mul
 end
 
 def unary
-  if consume?("+")
+  if consume("+")
     return unary()
   end
-  if consume?("-")
+  if consume("-")
     return new_binary(NodeKind::SUB, new_num(0), unary())
   end
-  if consume?("&")
+  if consume("&")
     return new_unary(NodeKind::ADDR, unary())
   end
-  if consume?("*")
+  if consume("*")
     return new_unary(NodeKind::DEREF, unary())
   end
   return postfix()
 end
 
 def postfix
-  node = term()
+  node = primary()
 
-  while consume?("[")
-    exp = new_binary(NodeKind::ADD, node, expr())
+  while consume("[")
+    exp = new_add(node, expr())
     expect("]")
     node = new_unary(NodeKind::DEREF, exp)
   end
@@ -492,15 +552,19 @@ def postfix
 end
 
 def stmt_expr
+  sc = $scope
+
   node = new_node(NodeKind::STMT_EXPR)
   node.body = stmt()
   cur = node.body
 
-  while !consume?("}")
+  while !consume("}")
     cur.next = stmt()
     cur = cur.next
   end
   expect(")")
+
+  $scope = sc
 
   if cur.kind != NodeKind::EXPR_STMT
     error("stmt expr returning void is not supported")
@@ -510,14 +574,14 @@ def stmt_expr
 end
 
 def func_args
-  if consume?(")")
+  if consume(")")
     return nil
   end
 
   head = assign()
   cur = head
 
-  while consume?(",")
+  while consume(",")
     cur.next = assign()
     cur = cur.next
   end
@@ -526,10 +590,10 @@ def func_args
   return head
 end
 
-def term
+def primary
   tok = nil
-  if tok = consume?("(")
-    if consume?("{")
+  if tok = consume("(")
+    if consume("{")
       return stmt_expr()
     end
     node = expr()
@@ -537,12 +601,14 @@ def term
     return node
   end
 
-  if tok = consume?("sizeof")
-    return new_unary(NodeKind::SIZEOF, unary())
+  if tok = consume("sizeof")
+    node = unary()
+    add_type(node)
+    return new_num(node.ty.size)
   end
 
   if tok = consume_ident()
-    if consume?("(")
+    if consume("(")
       node = new_node(NodeKind::FUNCALL)
       node.funcname = strndup(tok.str, tok.len)
       node.args = func_args()
@@ -553,7 +619,7 @@ def term
     if !var
       error("undefined variable")
     end
-    return new_var(var)
+    return new_var_node(var)
   end
 
   tok = $token
@@ -561,10 +627,10 @@ def term
     $token = $token.next
 
     ty = array_of(char_type(), tok.cont_len)
-    var = push_var(new_label(), ty, false)
+    var = new_gvar(new_label(), ty)
     var.contents = tok.contents
     var.cont_len = tok.cont_len
-    return new_var(var)
+    return new_var_node(var)
   end
 
   if tok.kind != TokenKind::NUM

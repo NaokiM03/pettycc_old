@@ -26,7 +26,7 @@ end
 
 def load(ty)
   puts("  pop rax\n")
-  if size_of(ty) == 1
+  if ty.size == 1
     puts("  movzx rax, byte ptr [rax]\n")
   else
     puts("  mov rax, [rax]\n")
@@ -38,7 +38,7 @@ def store(ty)
   puts("  pop rdi\n")
   puts("  pop rax\n")
 
-  if size_of(ty) == 1
+  if ty.size == 1
     puts("  mov [rax], dil\n")
   else
     puts("  mov [rax], rdi\n")
@@ -185,15 +185,20 @@ def gen(node)
 
   case node.kind
   when NodeKind::ADD then
-    if node.ty.base
-      puts("  imul rdi, #{size_of(node.ty.base)}\n")
-    end
+    puts("  add rax, rdi\n")
+  when NodeKind::PTR_ADD then
+    puts("  imul rdi, #{node.ty.base.size}\n")
     puts("  add rax, rdi\n")
   when NodeKind::SUB then
-    if node.ty.base
-      puts("  imul rdi, #{size_of(node.ty.base)}\n")
-    end
     puts("  sub rax, rdi\n")
+  when NodeKind::PTR_SUB then
+    puts("  imul rdi, #{node.ty.base.size}\n")
+    puts("  sub rax, rdi\n")
+  when NodeKind::PTR_DIFF then
+    puts("  sub rax, rdi\n")
+    puts("  cqo\n")
+    puts("  mov rdi, #{node.lhs.ty.base.size}\n")
+    puts("  idiv rdi\n")
   when NodeKind::MUL then
     puts("  imul rax, rdi\n")
   when NodeKind::DIV then
@@ -229,14 +234,7 @@ def emit_data(prog)
     puts("#{var.name}:\n")
 
     if !var.contents
-      puts("  .zero #{size_of(var.ty)}\n")
-      vl = vl.next
-      next
-    end
-
-    if var.contents == "27\0"
-      puts("  .byte #{27}\n")
-      puts("  .byte #{0}\n")
+      puts("  .zero #{var.ty.size}\n")
       vl = vl.next
       next
     end
@@ -250,7 +248,7 @@ def emit_data(prog)
 end
 
 def load_arg(var, idx)
-  sz = size_of(var.ty)
+  sz = var.ty.size
   if sz == 1
     puts("  mov [rbp-#{var.offset}], #{$argreg1[idx]}\n")
   else

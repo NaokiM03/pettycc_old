@@ -1,7 +1,7 @@
 require "./codegen.rb"
 require "./parse.rb"
 require "./tokenize.rb"
-require "./typing.rb"
+require "./type.rb"
 
 def int?(str)
   str.to_i.to_s == str.to_s
@@ -71,6 +71,7 @@ end
 $token
 $locals
 $globals
+$scope
 $user_input
 $user_input_cur
 
@@ -81,10 +82,9 @@ def main
 
   # Tokenize and parse
   $user_input = read_file(ARGV[0])
-  $user_input_cur = -1
+  $user_input_cur = 0
   $token = tokenize()
   prog = program()
-  add_type(prog)
 
   fn = prog.fns
   while fn
@@ -93,7 +93,7 @@ def main
     vl = fn.locals
     while vl
       var = vl.var
-      offset += size_of(var.ty)
+      offset += var.ty.size
       var.offset = offset
       vl = vl.next
     end
