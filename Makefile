@@ -3,7 +3,9 @@ ls:
 	ls
 
 test:
-	./test.sh
+	ruby ./pettycc.rb tests.c > tmp.s
+	gcc -static -no-pie -o tmp tmp.s
+	./tmp
 
 clean:
 	rm -f tmp*

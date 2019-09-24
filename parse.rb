@@ -482,7 +482,7 @@ def new_sub(lhs, rhs)
 
   # puts !!is_integer(lhs.ty) && !!is_integer(rhs.ty)
   # puts !!lhs.ty.base && !!is_integer(rhs.ty)
-  # puts !!is_integer(lhs.ty) && !!rhs.ty.base
+  # puts !!is_integer(lhs.ty.base) && !!rhs.ty.base
 
   if !!is_integer(lhs.ty) && !!is_integer(rhs.ty)
     return new_binary(NodeKind::SUB, lhs, rhs)
@@ -490,7 +490,7 @@ def new_sub(lhs, rhs)
   if !!lhs.ty.base && !!is_integer(rhs.ty)
     return new_binary(NodeKind::PTR_SUB, lhs, rhs)
   end
-  if !!is_integer(lhs.ty) && !!rhs.ty.base
+  if !!is_integer(lhs.ty.base) && !!rhs.ty.base
     return new_binary(NodeKind::PTR_DIFF, rhs, lhs)
   end
   error("invalid operands")

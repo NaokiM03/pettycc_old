@@ -134,6 +134,8 @@ def get_escape_char(c)
     return "\r"
   when "e" then
     return "\e"
+  when "0" then
+    return "\0"
   else
     return c
   end
