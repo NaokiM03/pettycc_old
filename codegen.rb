@@ -84,32 +84,32 @@ def gen(node)
       gen(node.cond)
       puts("  pop rax\n")
       puts("  cmp rax, 0\n")
-      puts("  je  .Lelse#{seq}\n")
+      puts("  je  .L.else#{seq}\n")
       gen(node.then)
-      puts("  jmp .Lend#{seq}\n")
-      puts(".Lelse#{seq}:\n")
+      puts("  jmp .L.end#{seq}\n")
+      puts(".L.else#{seq}:\n")
       gen(node.els)
-      puts(".Lend#{seq}:\n")
+      puts(".L.end#{seq}:\n")
     else
       gen(node.cond)
       puts("  pop rax\n")
       puts("  cmp rax, 0\n")
-      puts("  je  .Lend#{seq}\n")
+      puts("  je  .L.end#{seq}\n")
       gen(node.then)
-      puts(".Lend#{seq}:\n")
+      puts(".L.end#{seq}:\n")
     end
     return
   when NodeKind::WHILE then
     seq = $labelseq
     $labelseq += 1
-    puts(".Lbegin#{seq}:\n")
+    puts(".L.begin#{seq}:\n")
     gen(node.cond)
     puts("  pop rax\n")
     puts("  cmp rax, 0\n")
-    puts("  je  .Lend#{seq}\n")
+    puts("  je  .L.end#{seq}\n")
     gen(node.then)
-    puts("  jmp .Lbegin#{seq}\n")
-    puts(".Lend#{seq}:\n")
+    puts("  jmp .L.begin#{seq}\n")
+    puts(".L.end#{seq}:\n")
     return
   when NodeKind::FOR then
     seq = $labelseq
@@ -117,19 +117,19 @@ def gen(node)
     if node.init
       gen(node.init)
     end
-    puts(".Lbegin#{seq}:\n")
+    puts(".L.begin#{seq}:\n")
     if node.cond
       gen(node.cond)
       puts("  pop rax\n")
       puts("  cmp rax, 0\n")
-      puts("  je  .Lend#{seq}\n")
+      puts("  je  .L.end#{seq}\n")
     end
     gen(node.then)
     if node.inc
       gen(node.inc)
     end
-    puts("  jmp .Lbegin#{seq}\n")
-    puts(".Lend#{seq}:\n")
+    puts("  jmp .L.begin#{seq}\n")
+    puts(".L.end#{seq}:\n")
     return
   when NodeKind::BLOCK, NodeKind::STMT_EXPR then
     n = node.body
@@ -158,22 +158,22 @@ def gen(node)
     $labelseq += 1
     puts("  mov rax, rsp\n")
     puts("  and rax, 15\n")
-    puts("  jnz .Lcall#{seq}\n")
+    puts("  jnz .L.call#{seq}\n")
     puts("  mov rax, 0\n")
     puts("  call #{node.funcname}\n")
-    puts("  jmp .Lend#{seq}\n")
-    puts(".Lcall#{seq}:\n")
+    puts("  jmp .L.end#{seq}\n")
+    puts(".L.call#{seq}:\n")
     puts("  sub rsp, 8\n")
     puts("  mov rax, 0\n")
     puts("  call #{node.funcname}\n")
     puts("  add rsp, 8\n")
-    puts(".Lend#{seq}:\n")
+    puts(".L.end#{seq}:\n")
     puts("  push rax\n")
     return
   when NodeKind::RETURN then
     gen(node.lhs)
     puts("  pop rax\n")
-    puts("  jmp .Lreturn.#{$funcname}\n")
+    puts("  jmp .L.return.#{$funcname}\n")
     return
   end
 
@@ -285,7 +285,7 @@ def emit_text(prog)
       node = node.next
     end
 
-    puts(".Lreturn.#{$funcname}:\n")
+    puts(".L.return.#{$funcname}:\n")
     puts("  mov rsp, rbp\n")
     puts("  pop rbp\n")
     puts("  ret\n")
