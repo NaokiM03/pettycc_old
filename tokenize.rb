@@ -198,6 +198,11 @@ def tokenize()
       $user_input_cur += 2
     end
 
+    if p[0] == '"'
+      cur = read_string_literal(cur, p)
+      next
+    end
+
     kw = starts_with_keyword(p)
     if kw
       len = kw.length
@@ -206,9 +211,7 @@ def tokenize()
       next
     end
 
-    if ["+", "-", "*", "/",
-        "(", ")", "<", ">", ";", "=",
-        "{", "}", ",", "&", "[", "]", "."].include?(p[0])
+    if ispunct?(p[0])
       cur = new_token(TokenKind::RESERVED, cur, next_cur(p), 1)
       next
     end
@@ -219,11 +222,6 @@ def tokenize()
         str += next_cur(p)
       end
       cur = new_token(TokenKind::IDENT, cur, str, str.length)
-      next
-    end
-
-    if p[0] == '"'
-      cur = read_string_literal(cur, p)
       next
     end
 
