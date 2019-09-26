@@ -77,7 +77,8 @@ end
 $token
 $locals
 $globals
-$scope
+$var_scope
+$tag_scope
 $user_input
 $user_input_cur
 

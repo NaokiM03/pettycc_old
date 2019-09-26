@@ -35,6 +35,25 @@ class Member
   end
 end
 
+class TagScope
+  attr_accessor :next, :name, :ty
+
+  def initialize
+    @next = nil
+    @name = nil
+    @ty   = nil
+  end
+end
+
+class Scope
+  attr_accessor :var_scope, :tag_scope
+
+  def initialize
+    @var_scope = nil
+    @tag_scope = nil
+  end
+end
+
 module NodeKind
   ADD       = "ADD"       # num + num
   PTR_ADD   = "PTR_ADD"   # ptr + num or num + ptr
@@ -124,14 +143,37 @@ class Program
   end
 end
 
+def enter_scope()
+  sc = Scope.new
+  sc.var_scope = $var_scope
+  sc.tag_scope = $tag_scope
+  return sc
+end
+
+def leave_scope(sc)
+  $var_scope = sc.var_scope
+  $tag_scope = sc.tag_scope
+end
+
 def find_var(tok)
-  vl = $scope
+  vl = $var_scope
   while vl
     var = vl.var
     if var.name.length == tok.len && tok.str == var.name
       return var
     end
     vl = vl.next
+  end
+  return nil
+end
+
+def find_tag(tok)
+  sc = $tag_scope
+  while sc
+    if sc.name.length == tok.len && tok.str == sc.name
+      return sc
+    end
+    sc = sc.next
   end
   return nil
 end
@@ -175,8 +217,8 @@ def new_var(name, ty, is_local)
 
   sc = VarList.new
   sc.var = var
-  sc.next = $scope
-  $scope = sc
+  sc.next = $var_scope
+  $var_scope = sc
   return var
 end
 
@@ -267,8 +309,26 @@ def read_type_suffix(base)
   return array_of(base, sz)
 end
 
+def push_tag_scope(tok, ty)
+  sc = TagScope.new
+  sc.next = $tag_scope
+  sc.name = tok.str
+  sc.ty = ty
+  $tag_scope = sc
+end
+
 def struct_decl
   expect("struct")
+
+  tag = consume_ident()
+  if tag && !peek("{")
+    sc = find_tag(tag)
+    if !sc
+      error("unknown struct type")
+    end
+    return sc.ty
+  end
+
   expect("{")
 
   head = Member.new
@@ -296,6 +356,10 @@ def struct_decl
     mem = mem.next
   end
   ty.size = align_to(offset, ty.align)
+
+  if tag
+    push_tag_scope(tag, ty)
+  end
 
   return ty
 end
@@ -344,7 +408,7 @@ def function
   fn.name = expect_ident()
   expect("(")
 
-  sc = $scope
+  sc = enter_scope()
   fn.params = read_func_params()
   expect("{")
 
@@ -355,7 +419,7 @@ def function
     cur.next = stmt()
     cur = cur.next
   end
-  $scope = sc
+  leave_scope(sc)
 
   fn.node = head.next
   fn.locals = $locals
@@ -372,6 +436,10 @@ end
 
 def declaration
   ty = basetype()
+  if consume(";")
+    return new_node(NodeKind::NULL)
+  end
+
   name = expect_ident()
   ty = read_type_suffix(ty)
   var = new_lvar(name, ty)
@@ -453,12 +521,12 @@ def stmt2
     head = Node.new
     cur = head
 
-    sc = $scope
+    sc = enter_scope()
     while !consume("}")
       cur.next = stmt()
       cur = cur.next
     end
-    $scope = sc
+    leave_scope(sc)
 
     node = new_node(NodeKind::BLOCK)
     node.body = head.next
@@ -652,7 +720,7 @@ def postfix
 end
 
 def stmt_expr
-  sc = $scope
+  sc = enter_scope()
 
   node = new_node(NodeKind::STMT_EXPR)
   node.body = stmt()
@@ -664,7 +732,7 @@ def stmt_expr
   end
   expect(")")
 
-  $scope = sc
+  leave_scope(sc)
 
   if cur.kind != NodeKind::EXPR_STMT
     error("stmt expr returning void is not supported")
