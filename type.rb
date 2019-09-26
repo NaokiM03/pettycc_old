@@ -1,18 +1,20 @@
 module TypeKind
-  CHAR  = "CHAR"
-  INT   = "INT"
-  PTR   = "PTR"
-  ARRAY = "ARRAY"
+  CHAR   = "CHAR"
+  INT    = "INT"
+  PTR    = "PTR"
+  ARRAY  = "ARRAY"
+  STRUCT = "STRUCT"
 end
 
 class Type
-  attr_accessor :kind, :size, :base, :array_len
+  attr_accessor :kind, :size, :base, :array_len, :members
 
   def initialize
     @kind       = nil
     @size       = nil
     @base       = nil
     @array_len  = nil
+    @members    = nil
   end
 end
 
@@ -58,6 +60,8 @@ def add_type(node)
     return
   end
 
+  return if node.kind == NodeKind::NULL
+
   add_type(node.lhs)
   add_type(node.rhs)
   add_type(node.cond)
@@ -100,6 +104,9 @@ def add_type(node)
     return
   when NodeKind::VAR then
     node.ty = node.var.ty
+    return
+  when NodeKind::MEMBER then
+    node.ty = node.member.ty
     return
   when NodeKind::ADDR then
     if node.lhs.ty.kind == TypeKind::ARRAY

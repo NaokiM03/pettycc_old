@@ -12,6 +12,12 @@ def gen_addr(node)
   when NodeKind::DEREF then
     gen(node.lhs)
     return
+  when NodeKind::MEMBER then
+    gen_addr(node.lhs)
+    puts("  pop rax\n")
+    puts("  add rax, #{node.member.offset}\n")
+    puts("  push rax\n")
+    return 
   end
 
   error("not an lvalue")
@@ -57,7 +63,7 @@ def gen(node)
     gen(node.lhs)
     puts("  add rsp, 8\n")
     return
-  when NodeKind::VAR then
+  when NodeKind::VAR, NodeKind::MEMBER then
     gen_addr(node)
     if node.ty.kind != TypeKind::ARRAY
       load(node.ty)

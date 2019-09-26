@@ -24,6 +24,17 @@ class VarList
   end
 end
 
+class Member
+  attr_accessor :next, :ty, :name, :offset
+
+  def initialize
+    @next     = nil
+    @ty       = nil
+    @name     = nil
+    @offset   = nil
+  end
+end
+
 module NodeKind
   ADD       = "ADD"       # num + num
   PTR_ADD   = "PTR_ADD"   # ptr + num or num + ptr
@@ -37,6 +48,7 @@ module NodeKind
   LT        = "LT"        # <
   LE        = "LE"        # <=
   ASSIGN    = "ASSIGN"    # =
+  MEMBER    = "MEMBER"    # . (struct menber access)
   ADDR      = "ADDR"      # unary &
   DEREF     = "DEREF"     # unary *
   RETURN    = "RETURN"    # "return"
@@ -58,30 +70,33 @@ class Node
                 :lhs, :rhs,
                 :cond, :then, :els, :init, :inc,
                 :body,
+                :member,
                 :funcname, :args,
                 :var, :val
 
   def initialize
-    @kind     = nil      # NodeKind
-    @next     = nil      # Next node
-    @ty       = nil      # Type
+    @kind     = nil             # NodeKind
+    @next     = nil             # Next node
+    @ty       = nil             # Type
 
-    @lhs      = nil      # Left-hand side
-    @rhs      = nil      # Right-hand side
+    @lhs      = nil             # Left-hand side
+    @rhs      = nil             # Right-hand side
 
-    @cond     = nil      #-------------------------------
-    @then     = nil      #
-    @els      = nil      # "if", "while" or "for" statement
-    @init     = nil      #
-    @inc      = nil      #-------------------------------
+    @cond     = nil             #-------------------------------
+    @then     = nil             #
+    @els      = nil             # "if", "while" or "for" statement
+    @init     = nil             #
+    @inc      = nil             #-------------------------------
 
-    @body     = nil      # Block
+    @body     = nil             # Block
 
-    @funcname = nil      # Function call
-    @args     = nil      #
+    @menber   = nil      # Struct member access
 
-    @var     = Var.new  # Variable name
-    @val      = nil      # value if kind == NodeKind::NUM
+    @funcname = nil             # Function call
+    @args     = nil             #
+
+    @var     = Var.new          # Variable name
+    @val      = nil             # value if kind == NodeKind::NUM
   end
 end
 
@@ -223,12 +238,17 @@ def program
 end
 
 def basetype
+  if !is_typename()
+    error("typename expected")
+  end
+
   ty = nil
   if consume("char")
     ty = char_type()
-  else
-    expect("int")
+  elsif consume("int")
     ty = int_type()
+  else
+    ty = struct_decl()
   end
 
   while consume("*")
@@ -245,6 +265,44 @@ def read_type_suffix(base)
   expect("]")
   base = read_type_suffix(base)
   return array_of(base, sz)
+end
+
+def struct_decl
+  expect("struct")
+  expect("{")
+
+  head = Member.new
+  cur = head
+
+  while !consume("}")
+    cur.next = struct_member()
+    cur = cur.next
+  end
+
+  ty = Type.new
+  ty.kind = TypeKind::STRUCT
+  ty.members = head.next
+
+  offset = 0
+  mem = ty.members
+  while mem
+    mem.offset = offset
+    offset += mem.ty.size
+
+    mem = mem.next
+  end
+  ty.size = offset
+
+  return ty
+end
+
+def struct_member
+  mem = Member.new
+  mem.ty = basetype()
+  mem.name = expect_ident()
+  mem.ty = read_type_suffix(mem.ty)
+  expect(";")
+  return mem
 end
 
 def read_func_param
@@ -331,7 +389,7 @@ def read_expr_stmt
 end
 
 def is_typename
-  return peek("char") || peek("int")
+  return peek("char") || peek("int") || peek("struct")
 end
 
 def stmt
@@ -540,15 +598,53 @@ def unary
   return postfix()
 end
 
+def find_member(ty, name)
+  mem = ty.members
+  while mem
+    if mem.name == name
+      return mem
+    end
+    mem = mem.next
+  end
+
+  return nil
+end
+
+def struct_ref(lhs)
+  add_type(lhs)
+  if lhs.ty.kind != TypeKind::STRUCT
+    error("not a struct")
+  end
+
+  mem = find_member(lhs.ty, expect_ident())
+  if !mem
+    error("no such member")
+  end
+
+  node = new_unary(NodeKind::MEMBER, lhs)
+  node.member = mem
+
+  return node
+end
+
 def postfix
   node = primary()
 
-  while consume("[")
-    exp = new_add(node, expr())
-    expect("]")
-    node = new_unary(NodeKind::DEREF, exp)
+  loop do
+    if consume("[")
+      exp = new_add(node, expr())
+      expect("]")
+      node = new_unary(NodeKind::DEREF, exp)
+      next
+    end
+
+    if consume(".")
+      node = struct_ref(node)
+      next
+    end
+
+    return node
   end
-  return node
 end
 
 def stmt_expr

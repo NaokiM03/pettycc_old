@@ -96,7 +96,7 @@ def new_token(kind, cur, str, len)
 end
 
 def starts_with_keyword(p)
-  kw = ["return", "if", "else", "while", "for", "int", "char", "sizeof"]
+  kw = ["return", "if", "else", "while", "for", "int", "char", "sizeof", "struct"]
 
   kw.length.times{|i|
     len = kw[i].length
@@ -208,7 +208,7 @@ def tokenize()
 
     if ["+", "-", "*", "/",
         "(", ")", "<", ">", ";", "=",
-        "{", "}", ",", "&", "[", "]"].include?(p[0])
+        "{", "}", ",", "&", "[", "]", "."].include?(p[0])
       cur = new_token(TokenKind::RESERVED, cur, next_cur(p), 1)
       next
     end
