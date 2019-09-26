@@ -7,49 +7,56 @@ module TypeKind
 end
 
 class Type
-  attr_accessor :kind, :size, :base, :array_len, :members
+  attr_accessor :kind, :size, :align, :base, :array_len, :members
 
   def initialize
     @kind       = nil
     @size       = nil
+    @align      = nil
     @base       = nil
     @array_len  = nil
     @members    = nil
   end
 end
 
-def new_type(kind)
+def new_type(kind, size, align)
   ty = Type.new
   ty.kind = kind
+  ty.size = size
+  ty.align = align
   return ty
 end
 
 def char_type()
-  ty = new_type(TypeKind::CHAR)
-  ty.size = 1
+  ty = new_type(TypeKind::CHAR, 1, 1)
   return ty
 end
 
 def int_type()
-  ty = new_type(TypeKind::INT)
-  ty.size = 8
+  ty = new_type(TypeKind::INT, 8, 8)
   return ty
+end
+
+def struct_type()
+  ty = new_type(TypeKind::STRUCT, nil, 0)
 end
 
 def is_integer(ty)
   return ty.kind == TypeKind::CHAR || ty.kind == TypeKind::INT
 end
 
+def align_to(n, align)
+  return (n + align - 1) & ~(align - 1)
+end
+
 def pointer_to(base)
-  ty = new_type(TypeKind::PTR)
-  ty.size = 8
+  ty = new_type(TypeKind::PTR, 8, 8)
   ty.base = base
   return ty
 end
 
 def array_of(base, len)
-  ty = new_type(TypeKind::ARRAY)
-  ty.size = base.size * len
+  ty = new_type(TypeKind::ARRAY, base.size * len, base.align)
   ty.base = base
   ty.array_len = len
   return ty

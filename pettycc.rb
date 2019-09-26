@@ -66,10 +66,6 @@ def error_at(msg)
   exit!
 end
 
-def align_to(n, align)
-  return (n + align - 1) & ~(align - 1)
-end
-
 def read_file(path)
   begin
     File.read(path)

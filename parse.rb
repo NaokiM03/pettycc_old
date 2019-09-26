@@ -279,19 +279,23 @@ def struct_decl
     cur = cur.next
   end
 
-  ty = Type.new
-  ty.kind = TypeKind::STRUCT
+  ty = struct_type()
   ty.members = head.next
 
   offset = 0
   mem = ty.members
   while mem
+    offset = align_to(offset, mem.ty.align)
     mem.offset = offset
     offset += mem.ty.size
 
+    if ty.align < mem.ty.align
+      ty.align = mem.ty.align
+    end
+
     mem = mem.next
   end
-  ty.size = offset
+  ty.size = align_to(offset, ty.align)
 
   return ty
 end
