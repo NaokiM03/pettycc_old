@@ -99,6 +99,7 @@ def main
     vl = fn.locals
     while vl
       var = vl.var
+      offset = align_to(offset, var.ty.align)
       offset += var.ty.size
       var.offset = offset
       vl = vl.next
