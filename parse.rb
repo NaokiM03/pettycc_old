@@ -715,6 +715,12 @@ def postfix
       next
     end
 
+    if consume("->")
+      node = new_unary(NodeKind::DEREF, node)
+      node = struct_ref(node)
+      next
+    end
+
     return node
   end
 end

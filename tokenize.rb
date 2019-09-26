@@ -105,7 +105,7 @@ def starts_with_keyword(p)
     end
   }
 
-  ops = ["==", "!=", "<=", ">="]
+  ops = ["==", "!=", "<=", ">=", "->"]
 
   ops.length.times{|i|
     if startswith(p, ops[i])
